@@ -1,0 +1,1191 @@
+{
+  "info": {
+    "name": "Ninja Bazaar API Collection",
+    "description": "Complete API collection for Ninja Bazaar e-commerce platform",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api",
+      "type": "string"
+    }
+  ],
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{authToken}}",
+        "type": "string"
+      }
+    ]
+  },
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Buyer Sign Up",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/buyer-signUp",
+              "path": ["auth", "buyer-signUp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"contactNumber\": \"1234567890\",\n  \"password\": \"securePassword123\"\n}"
+            },
+            "description": "Register a new buyer account"
+          },
+          "response": []
+        },
+        {
+          "name": "Seller Sign Up",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/seller-signUp",
+              "path": ["auth", "seller-signUp"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Jane\",\n  \"lastName\": \"Smith\",\n  \"email\": \"jane.seller@example.com\",\n  \"contactNumber\": \"0987654321\",\n  \"password\": \"securePassword123\"\n}"
+            },
+            "description": "Register a new seller account"
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/verify-email",
+              "path": ["auth", "verify-email"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"verification-token-here\",\n  \"email\": \"user@example.com\"\n}"
+            },
+            "description": "Verify user email with token"
+          },
+          "response": []
+        },
+        {
+          "name": "Resend Verification Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/resend-verification",
+              "path": ["auth", "resend-verification"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "description": "Resend email verification link"
+          },
+          "response": []
+        },
+        {
+          "name": "Get User",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/getUser",
+              "path": ["getUser"]
+            },
+            "description": "Get current user information (requires authentication)"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Buyer Profile",
+      "item": [
+        {
+          "name": "Get Buyer Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/buyer-profile",
+              "path": ["auth", "buyer-profile"]
+            },
+            "description": "Get buyer profile information"
+          },
+          "response": []
+        },
+        {
+          "name": "Create/Update Buyer Profile",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/buyer-profile",
+              "path": ["auth", "buyer-profile"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John\",\n  \"lastName\": \"Doe\",\n  \"contactNumber\": \"1234567890\",\n  \"dateOfBirth\": \"1990-01-01\"\n}"
+            },
+            "description": "Create or update buyer profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Buyer Profile",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/buyer-profile",
+              "path": ["auth", "buyer-profile"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"John Updated\"\n}"
+            },
+            "description": "Partially update buyer profile"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Buyer Profile",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/buyer-profile",
+              "path": ["auth", "buyer-profile"]
+            },
+            "description": "Delete buyer profile (requires authentication)"
+          },
+          "response": []
+        },
+        {
+          "name": "Change Profile Picture",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/changePFP/post",
+              "path": ["changePFP", "post"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "description": "Change user profile picture"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Cart",
+      "item": [
+        {
+          "name": "Add to Cart",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/post",
+              "path": ["cart", "post"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"cart\": [\n    {\n      \"productId\": \"product_id_here\",\n      \"name\": \"Product Name\",\n      \"basePrice\": 99.99,\n      \"isSale\": false,\n      \"salePrice\": null,\n      \"quantity\": 1,\n      \"variantCombination\": [\"Size: M\", \"Color: Blue\"],\n      \"variantId\": \"variant_id_here\",\n      \"images\": \"[\"image_url\"]\"\n    }\n  ]\n}"
+            },
+            "description": "Add items to cart"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Cart",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cart/get?userId={{buyerProfileId}}",
+              "path": ["cart", "get"],
+              "query": [
+                {
+                  "key": "userId",
+                  "value": "{{buyerProfileId}}"
+                }
+              ]
+            },
+            "description": "Get cart items for a user"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Cart Item",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/cart/patch",
+              "path": ["cart", "patch"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"itemId\": \"cart_item_id_here\",\n  \"quantity\": 2\n}"
+            },
+            "description": "Update quantity of a cart item"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Cart Item",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cart/delete?id={{cartItemId}}",
+              "path": ["cart", "delete"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{cartItemId}}"
+                }
+              ]
+            },
+            "description": "Remove an item from cart"
+          },
+          "response": []
+        },
+        {
+          "name": "Clear Cart",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cart/clear",
+              "path": ["cart", "clear"]
+            },
+            "description": "Clear all items from cart"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "Search Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?q=search_term",
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "search_term"
+                }
+              ]
+            },
+            "description": "Search products by query"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product by ID",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?id=product_id_here",
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "product_id_here"
+                }
+              ]
+            },
+            "description": "Get a specific product by ID"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Products by Category",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/products?category=electronics",
+              "path": ["products"],
+              "query": [
+                {
+                  "key": "category",
+                  "value": "electronics"
+                }
+              ]
+            },
+            "description": "Get products by category"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Product Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/product-details/get?id={{productId}}",
+              "path": ["product-details", "get"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{productId}}"
+                }
+              ]
+            },
+            "description": "Get detailed product information including reviews"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Random Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/random-products?limit=12",
+              "path": ["random-products"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "12"
+                }
+              ]
+            },
+            "description": "Get random products for display"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Related Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/related-products?id={{productId}}",
+              "path": ["related-products"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{productId}}"
+                }
+              ]
+            },
+            "description": "Get related products based on product ID or keywords"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Popular Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/popular-products",
+              "path": ["popular-products"]
+            },
+            "description": "Get popular/trending products"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product Count",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/products/product-count",
+              "path": ["products", "product-count"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"product_id_here\",\n  \"incrementBy\": 1\n}"
+            },
+            "description": "Update product purchase count"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Seller",
+      "item": [
+        {
+          "name": "Get Seller Profile",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/getSellerProfile",
+              "path": ["getSellerProfile"]
+            },
+            "description": "Get seller profile information"
+          },
+          "response": []
+        },
+        {
+          "name": "Seller Registration",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "multipart/form-data"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seller-registration/POST",
+              "path": ["seller-registration", "POST"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "shopName",
+                  "value": "My Shop",
+                  "type": "text"
+                },
+                {
+                  "key": "businessType",
+                  "value": "sole_proprietorship",
+                  "type": "text"
+                },
+                {
+                  "key": "businessRegisteredName",
+                  "value": "My Business Ltd",
+                  "type": "text"
+                },
+                {
+                  "key": "registeredAddress",
+                  "value": "123 Main St, City, State, 12345, Country",
+                  "type": "text"
+                },
+                {
+                  "key": "businessDocumentType",
+                  "value": "registration_certificate",
+                  "type": "text"
+                },
+                {
+                  "key": "businessEmail",
+                  "value": "business@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "businessPhoneNumber",
+                  "value": "1234567890",
+                  "type": "text"
+                },
+                {
+                  "key": "companyName",
+                  "value": "My Company",
+                  "type": "text"
+                },
+                {
+                  "key": "pickupAddress",
+                  "value": "456 Warehouse St, City, State, 12345, Country",
+                  "type": "text"
+                },
+                {
+                  "key": "sellerEmail",
+                  "value": "seller@example.com",
+                  "type": "text"
+                },
+                {
+                  "key": "sellerPhoneNumber",
+                  "value": "0987654321",
+                  "type": "text"
+                },
+                {
+                  "key": "shippingTerms",
+                  "value": "Free shipping on orders over $50",
+                  "type": "text"
+                },
+                {
+                  "key": "returnsTerms",
+                  "value": "30-day return policy",
+                  "type": "text"
+                },
+                {
+                  "key": "businessDocumentFile",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "description": "Submit seller registration with business details"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Seller Products",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seller-products/get?sellerId={{sellerProfileId}}",
+              "path": ["seller-products", "get"],
+              "query": [
+                {
+                  "key": "sellerId",
+                  "value": "{{sellerProfileId}}"
+                }
+              ]
+            },
+            "description": "Get all products for a seller"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Seller Product",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seller-products/put",
+              "path": ["seller-products", "put"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"product_id_here\",\n  \"name\": \"Updated Product Name\",\n  \"description\": \"Updated description\",\n  \"basePrice\": 149.99,\n  \"isSale\": true,\n  \"salePrice\": 129.99\n}"
+            },
+            "description": "Update product details"
+          },
+          "response": []
+        },
+        {
+          "name": "Delete Seller Product",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seller-products/delete?id={{productId}}",
+              "path": ["seller-products", "delete"],
+              "query": [
+                {
+                  "key": "id",
+                  "value": "{{productId}}"
+                }
+              ]
+            },
+            "description": "Delete a product"
+          },
+          "response": []
+        },
+        {
+          "name": "Bulk Delete Products",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seller-products/delete-bulk",
+              "path": ["seller-products", "delete-bulk"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"ids\": [\"product_id_1\", \"product_id_2\", \"product_id_3\"]\n}"
+            },
+            "description": "Delete multiple products at once"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Product Visibility",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seller-products/update-visibility",
+              "path": ["seller-products", "update-visibility"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"product_id_here\",\n  \"isActive\": true\n}"
+            },
+            "description": "Toggle product visibility (active/inactive)"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Seller Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/seller-order/get?sellerId={{sellerProfileId}}&page=1&limit=10",
+              "path": ["seller-order", "get"],
+              "query": [
+                {
+                  "key": "sellerId",
+                  "value": "{{sellerProfileId}}"
+                },
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get orders for a seller with pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Order Tracking Link",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seller-order/put-tracking-link",
+              "path": ["seller-order", "put-tracking-link"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order_id_here\",\n  \"status\": \"shipped\",\n  \"trackingLink\": \"https://tracking.example.com/12345\"\n}"
+            },
+            "description": "Update order status and tracking link"
+          },
+          "response": []
+        },
+        {
+          "name": "Cancel Order",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seller-order/cancel-order",
+              "path": ["seller-order", "cancel-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order_id_here\",\n  \"reason\": \"Customer requested cancellation\"\n}"
+            },
+            "description": "Cancel an order"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Seller Dashboard",
+          "request": {
+            "method": "PATCH",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seller-dashboard/basic-details/patch",
+              "path": ["seller-dashboard", "basic-details", "patch"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"id\": \"seller_profile_id_here\",\n  \"businessRegisteredName\": \"Updated Business Name\",\n  \"company_name\": \"Updated Company\",\n  \"shop_description\": \"Updated shop description\",\n  \"street\": \"123 Updated St\",\n  \"city\": \"New City\",\n  \"state\": \"New State\",\n  \"postalCode\": \"54321\",\n  \"country\": \"USA\"\n}"
+            },
+            "description": "Update seller dashboard basic details"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Signed URL for Document",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/seller-dashboard/business-details/get-signed-url",
+              "path": ["seller-dashboard", "business-details", "get-signed-url"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"filePath\": \"user_id/document_name.pdf\"\n}"
+            },
+            "description": "Get signed URL for accessing business documents"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "item": [
+        {
+          "name": "Create Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/orders/create",
+              "path": ["orders", "create"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"userId\": \"buyer_profile_id_here\",\n  \"items\": [\n    {\n      \"id\": \"cart_item_id_1\",\n      \"productId\": \"product_id_here\",\n      \"name\": \"Product Name\",\n      \"basePrice\": 99.99,\n      \"isSale\": false,\n      \"salePrice\": null,\n      \"quantity\": 1,\n      \"sellerId\": \"seller_profile_id_here\",\n      \"priceAtPurchase\": 99.99\n    }\n  ],\n  \"shippingMethods\": {\n    \"cart_item_id_1\": {\n      \"name\": \"Express Shipping\",\n      \"price\": 9.99\n    }\n  },\n  \"totalAmount\": 109.98,\n  \"paymentId\": \"payment_id_here\",\n  \"razorpayOrderId\": \"razorpay_order_id_here\",\n  \"shippingAddress\": {\n    \"street\": \"123 Main St\",\n    \"city\": \"City\",\n    \"state\": \"State\",\n    \"postalCode\": \"12345\",\n    \"country\": \"USA\",\n    \"isDefault\": true\n  }\n}"
+            },
+            "description": "Create a new order with items and shipping"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Buyer Orders",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/buyer-get-orders",
+              "path": ["buyer-get-orders"]
+            },
+            "description": "Get all orders for the authenticated buyer"
+          },
+          "response": []
+        },
+        {
+          "name": "Confirm Receipt",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/buyer-confirm-receipt",
+              "path": ["buyer-confirm-receipt"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order_id_here\"\n}"
+            },
+            "description": "Buyer confirms order receipt"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Payment",
+      "item": [
+        {
+          "name": "Create Razorpay Order",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/razorpay/create-order",
+              "path": ["payment", "razorpay", "create-order"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"amount\": 10998,\n  \"currency\": \"INR\"\n}"
+            },
+            "description": "Create a Razorpay order for payment"
+          },
+          "response": []
+        },
+        {
+          "name": "Verify Razorpay Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/razorpay/verify",
+              "path": ["payment", "razorpay", "verify"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"razorpayPaymentId\": \"pay_xxxxxxxxxxxx\",\n  \"razorpayOrderId\": \"order_xxxxxxxxxxxx\",\n  \"razorpaySignature\": \"signature_here\"\n}"
+            },
+            "description": "Verify Razorpay payment signature"
+          },
+          "response": []
+        },
+        {
+          "name": "Escrow Payment",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/escrow",
+              "path": ["payment", "escrow"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order_id_here\"\n}"
+            },
+            "description": "Get escrow payment details for an order"
+          },
+          "response": []
+        },
+        {
+          "name": "Buyer Release Escrow",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/payment/escrow/buyer-release",
+              "path": ["payment", "escrow", "buyer-release"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"orderId\": \"order_id_here\"\n}"
+            },
+            "description": "Buyer releases escrow payment after receiving order"
+          },
+          "response": []
+        },
+        {
+          "name": "Cron - Payment Status Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/payment/cron/GET",
+              "path": ["payment", "cron", "GET"]
+            },
+            "description": "Cron job endpoint for checking payment statuses"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Reviews",
+      "item": [
+        {
+          "name": "Create Review",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/review",
+              "path": ["review"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"productId\": \"product_id_here\",\n  \"rating\": 5,\n  \"title\": \"Great product!\",\n  \"comment\": \"Excellent quality and fast shipping. Highly recommend!\"\n}"
+            },
+            "description": "Create a product review"
+          },
+          "response": []
+        },
+        {
+          "name": "Update Review",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/review/{{reviewId}}",
+              "path": ["review", "{{reviewId}}"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"rating\": 4,\n  \"title\": \"Updated review\",\n  \"comment\": \"Updated comment for the review\"\n}"
+            },
+            "description": "Update an existing review"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Existing Review",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/review/existing?productId={{productId}}&userId={{userId}}",
+              "path": ["review", "existing"],
+              "query": [
+                {
+                  "key": "productId",
+                  "value": "{{productId}}"
+                },
+                {
+                  "key": "userId",
+                  "value": "{{userId}}"
+                }
+              ]
+            },
+            "description": "Check if user has already reviewed a product"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Messaging",
+      "item": [
+        {
+          "name": "Get Conversations",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/get",
+              "path": ["conversations", "get"]
+            },
+            "description": "Get all conversations for the user"
+          },
+          "response": []
+        },
+        {
+          "name": "Create Conversation",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/conversations/post",
+              "path": ["conversations", "post"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"buyerId\": \"buyer_user_id_here\",\n  \"sellerId\": \"seller_user_id_here\",\n  \"productId\": \"product_id_here\"\n}"
+            },
+            "description": "Start a new conversation"
+          },
+          "response": []
+        },
+        {
+          "name": "Get Messages",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/messages/get?conversationId={{conversationId}}",
+              "path": ["messages", "get"],
+              "query": [
+                {
+                  "key": "conversationId",
+                  "value": "{{conversationId}}"
+                }
+              ]
+            },
+            "description": "Get messages for a conversation"
+          },
+          "response": []
+        },
+        {
+          "name": "Send Message",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/messages/post",
+              "path": ["messages", "post"]
+            },
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"conversationId\": \"conversation_id_here\",\n  \"senderId\": \"user_id_here\",\n  \"content\": \"Hello, I have a question about this product\",\n  \"messageType\": \"TEXT\"\n}"
+            },
+            "description": "Send a new message in a conversation"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Wallet",
+      "item": [
+        {
+          "name": "Get Seller Wallet",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/wallet",
+              "path": ["wallet"]
+            },
+            "description": "Get seller wallet balance and transactions"
+          },
+          "response": []
+        }
+      ]
+    },
+    {
+      "name": "Upload",
+      "item": [
+        {
+          "name": "Upload File",
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/upload",
+              "path": ["upload"]
+            },
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                },
+                {
+                  "key": "bucket",
+                  "value": "business-documents",
+                  "type": "text"
+                },
+                {
+                  "key": "documentType",
+                  "value": "business_registration",
+                  "type": "text"
+                }
+              ]
+            },
+            "description": "Upload file to Supabase storage"
+          },
+          "response": []
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,919 @@
+'use client'
+import React, { useState } from 'react'
+
+import { Input } from '@/components/ui/input'
+import { Checkbox } from '@/components/ui/checkbox'
+import { Button } from '@/components/ui/button'
+import { Textarea } from '@/components/ui/textarea'
+import { Trash2, X } from 'lucide-react'
+import { z } from 'zod'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import {
+  Select,
+  SelectContent,
+  SelectGroup,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
+import { useSession } from 'next-auth/react'
+import { ShippingMethod } from '@/app/types/type'
+import { toast } from 'sonner'
+
+const productSchema = z.object({
+  productName: z.string().min(1, 'Product Name is required'),
+  category: z.string().min(4, 'Category is required'),
+  productKeywords: z
+    .string()
+    .min(1, 'Product Keywords are required')
+    .transform((str) =>
+      str
+        .split(',')
+        .map((keyword) => keyword.trim())
+        .filter((keyword) => keyword.length > 0)
+    ),
+  description: z.string().min(1, 'Description is required'),
+  basePrice: z.coerce.number().min(0.01, 'Base Price must be greater than 0'),
+  shippingMethods: z.boolean().default(false),
+  variantsOpen: z.boolean().default(false),
+  MOQOpen: z.boolean().default(false),
+})
+
+type ProductFormValues = z.infer<typeof productSchema>
+
+const Page = () => {
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+    setValue,
+    watch,
+    reset,
+  } = useForm<ProductFormValues>({
+    resolver: zodResolver(productSchema),
+    defaultValues: {
+      productName: '',
+      category: '',
+      productKeywords: [],
+      description: '',
+      basePrice: 0,
+      variantsOpen: false,
+      MOQOpen: false,
+      shippingMethods: false,
+    },
+  })
+
+  // left at adding ui or forms to accept shipping mthods, cour dhl
+
+  // Watch the checkbox values
+  const variantsOpen = watch('variantsOpen')
+  const MOQOpen = watch('MOQOpen')
+
+  // State for multiple images
+  const [productImages, setProductImages] = useState<File[]>([])
+  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  // Loading State
+  const [isSubmitting, setIsSubmitting] = useState(false)
+
+  // State for dynamic sections
+  const [variants, setVariants] = useState([
+    {
+      title: '',
+      options: [{ value: '', hasPrice: false, price: 0 }],
+    },
+  ])
+  // State for MOQs (Minimum Order Quantities)
+  const [moqs, setMoqs] = useState([{ quantityRange: '', price: 0 }])
+  // State for shipping methods
+  const [shippingMethods, setShippingMethods] = useState([
+    {
+      name: '',
+      price: 0,
+      estimatedDays: '',
+      description: '',
+      isActive: true,
+    },
+  ])
+
+  // session
+  const { data: session } = useSession()
+
+  // Image handling functions
+  const handleImageUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || [])
+
+    // Limit to 5 images maximum
+    if (productImages.length + files.length > 5) {
+      alert('Maximum 5 images allowed')
+      return
+    }
+
+    // Validate file types and sizes
+    const validFiles = files.filter((file) => {
+      if (!file.type.startsWith('image/')) {
+        alert(`${file.name} is not an image file`)
+        return false
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        // 5MB limit
+        alert(`${file.name} is too large (max 5MB)`)
+        return false
+      }
+      return true
+    })
+
+    if (validFiles.length === 0) return
+
+    // Update images state
+    setProductImages((prev) => [...prev, ...validFiles])
+
+    // Create previews for display only
+    validFiles.forEach((file) => {
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreviews((prev) => [...prev, e.target?.result as string])
+      }
+      reader.readAsDataURL(file)
+    })
+
+    // Clear the input
+    event.target.value = ''
+  }
+
+  const removeImage = (index: number) => {
+    setProductImages((prev) => prev.filter((_, i) => i !== index))
+    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const clearAllImages = () => {
+    setProductImages([])
+    setImagePreviews([])
+  }
+
+  const addShippingMethod = () => {
+    setShippingMethods((prev) => [
+      ...prev,
+      {
+        name: '',
+        price: 0,
+        estimatedDays: '',
+        description: '',
+        isActive: true,
+      },
+    ])
+  }
+
+  const updateShippingMethod = (
+    index: number,
+    field: keyof ShippingMethod,
+    value: any //eslint-disable-line
+  ) => {
+    const updated = shippingMethods.map((method, i) =>
+      i === index ? { ...method, [field]: value } : method
+    )
+    setShippingMethods(updated)
+  }
+
+  const removeShippingMethod = (index: number) => {
+    if (shippingMethods.length > 1) {
+      setShippingMethods((prev) => prev.filter((_, i) => i !== index))
+    }
+  }
+
+  // Variant management functions
+  //eslint-disable-next-line
+  const updateVariant = (variantIndex: number, field: string, value: any) => {
+    const updatedVariants = [...variants]
+    updatedVariants[variantIndex] = {
+      ...updatedVariants[variantIndex],
+      [field]: value,
+    }
+    setVariants(updatedVariants)
+  }
+
+  const updateVariantOption = (
+    variantIndex: number,
+    optionIndex: number,
+    field: string,
+    value: any //eslint-disable-line
+  ) => {
+    const updatedVariants = [...variants]
+    updatedVariants[variantIndex].options[optionIndex] = {
+      ...updatedVariants[variantIndex].options[optionIndex],
+      [field]: value,
+    }
+    setVariants(updatedVariants)
+  }
+
+  const addVariantOption = (variantIndex: number) => {
+    const updatedVariants = [...variants]
+    updatedVariants[variantIndex].options.push({
+      value: '',
+      hasPrice: false,
+      price: 0,
+    })
+    setVariants(updatedVariants)
+  }
+
+  const addVariant = () => {
+    setVariants((prev) => [
+      ...prev,
+      {
+        title: '',
+        options: [{ value: '', hasPrice: false, price: 0 }],
+      },
+    ])
+  }
+
+  const removeVariant = (variantIndex: number) => {
+    setVariants((prev) => prev.filter((_, index) => index !== variantIndex))
+  }
+
+  // const updateMoq = (moqIndex: number, field: string, value: any) => {
+  //   const updatedMoqs = [...moqs]
+  //   updatedMoqs[moqIndex] = { ...updatedMoqs[moqIndex], [field]: value }
+  //   setMoqs(updatedMoqs)
+  // }
+
+  // const addMoq = () => {
+  //   setMoqs((prev) => [...prev, { quantityRange: '', price: 0 }])
+  // }
+
+  // const removeMoq = (moqIndex: number) => {
+  //   setMoqs((prev) => prev.filter((_, index) => index !== moqIndex))
+  // }
+
+  const categories = [
+    { value: 'home-garden', label: 'Home & Garden' },
+    { value: 'electronics', label: 'Electronics' },
+    { value: 'fashion', label: 'Fashion' },
+    { value: 'accessories', label: 'Accessories' },
+    { value: 'sports-entertainment', label: 'Sports & Entertainment' },
+    { value: 'mother-kids', label: 'Mother & Kids' },
+    { value: 'beauty-health', label: 'Beauty & Health' },
+    { value: 'toys-games', label: 'Toys & Games' },
+    { value: 'automobiles', label: 'Automobiles' },
+    { value: 'arts-crafts', label: 'Arts & Crafts' },
+  ]
+
+  const onSubmit = async (data: ProductFormValues) => {
+    try {
+      // Validate at least one image
+      console.log('Full session object:', session)
+      console.log('Session user:', session?.user)
+      console.log('Session user ID:', session?.user?.id)
+      console.log('Session user ID type:', typeof session?.user?.id)
+
+      console.log('FormData to send:', {
+        name: data.productName,
+        category: data.category,
+        keywords: data.productKeywords.join(','),
+        description: data.description,
+        basePrice: data.basePrice,
+        sellerId: session?.user.id,
+        productImages,
+        shippingMethods,
+      })
+
+      if (productImages.length === 0) {
+        alert('Please select at least one product image')
+        return
+      }
+
+      // Validate at least one shipping method
+      const validShippingMethods = shippingMethods.filter(
+        (method) =>
+          method.name.trim() && method.price >= 0 && method.estimatedDays
+      )
+
+      if (validShippingMethods.length === 0) {
+        alert('Please add at least one valid shipping method')
+        return
+      }
+
+      setIsSubmitting(true)
+
+      const filteredShippingMethods = shippingMethods.filter(
+        (m) =>
+          m.name.trim() &&
+          m.estimatedDays.trim() &&
+          typeof m.price === 'number' &&
+          m.price >= 0
+      )
+
+      const formDataToSend = new FormData()
+      formDataToSend.append('name', data.productName)
+      formDataToSend.append('category', data.category)
+      formDataToSend.append('keywords', data.productKeywords.join(','))
+      formDataToSend.append('description', data.description)
+      formDataToSend.append('basePrice', data.basePrice.toString())
+      formDataToSend.append('sellerId', session?.user.id ?? '')
+      // Add all images
+      productImages.forEach((image) => {
+        formDataToSend.append('productImages', image)
+      })
+      formDataToSend.append(
+        'shippingMethods',
+        JSON.stringify(filteredShippingMethods)
+      )
+
+      // Add variants if enabled
+      if (data.variantsOpen) {
+        const filteredVariants = variants.filter((v) => v.title.trim())
+        formDataToSend.append('variants', JSON.stringify(filteredVariants))
+      }
+
+      // Add MOQs if enabled (when implemented)
+      if (data.MOQOpen) {
+        const filteredMoqs = moqs.filter((m) => m.quantityRange.trim())
+        formDataToSend.append('moqs', JSON.stringify(filteredMoqs))
+      }
+
+      const response = await fetch('/api/products/post', {
+        method: 'POST',
+        body: formDataToSend,
+      })
+
+      const result = await response.json()
+
+      if (response.ok) {
+        toast.success('Product created successfully!')
+        console.log('Created product:', result.product)
+
+        // Reset form
+        reset() // if using react-hook-form reset function
+        setProductImages([])
+        setImagePreviews([])
+        setVariants([
+          {
+            title: '',
+            options: [{ value: '', hasPrice: false, price: 0 }],
+          },
+        ])
+        setMoqs([{ quantityRange: '', price: 0 }])
+
+        // DEBUG: Log FormData contents
+        console.log('FormData contents:')
+        for (const [key, value] of formDataToSend.entries()) {
+          if (value instanceof File) {
+            console.log(
+              `${key}:`,
+              `File(${value.name}, ${value.size} bytes, ${value.type})`
+            )
+          } else {
+            console.log(`${key}:`, value)
+          }
+        }
+
+        // Prepare final data for API
+        const apiData = {
+          productName: data.productName,
+          category: data.category,
+          productKeywords: data.productKeywords,
+          description: data.description,
+          basePrice: data.basePrice,
+          productImages: productImages,
+          variants: data.variantsOpen
+            ? variants.filter((v) => v.title.trim())
+            : [],
+          moqs: data.MOQOpen ? moqs.filter((m) => m.quantityRange.trim()) : [],
+          shippingMethods: data.shippingMethods
+            ? shippingMethods.filter((m) => m.name.trim())
+            : [],
+        }
+
+        console.log('API Data:', apiData)
+        console.log('Number of images:', productImages.length)
+      }
+
+      return result
+    } catch (error) {
+      console.log(error)
+      alert('Network error occurred. Please try again.')
+    } finally {
+      setIsSubmitting(false)
+    }
+  }
+
+  const onError = (errors: Record<string, unknown>) => {
+    console.log('Form validation errors:', errors)
+  }
+
+  return (
+    <>
+      <form
+        onSubmit={handleSubmit(onSubmit, onError)}
+        className="flex-1 mx-4 md:mx-10 my-10 max-w-6xl"
+      >
+        {/* Product Information */}
+        <div className="border-b pb-8 border-gray-200">
+          <h1 className="text-2xl font-bold">Product Information</h1>
+          <div className="space-y-6 mt-6">
+            {/* PRODUCT NAME */}
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>
+                  <span className="text-[#EE2932]">*</span> Product Name
+                </h2>
+              </div>
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  placeholder="Product Name Here"
+                  className="w-full h-10"
+                  {...register('productName')}
+                />
+                {errors.productName && (
+                  <span className="text-red-500 text-xs mt-1 block">
+                    {errors.productName.message}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* CATEGORY */}
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>
+                  <span className="text-[#EE2932]">*</span> Category
+                </h2>
+              </div>
+              <div className="flex-1">
+                <Select
+                  value={watch('category')}
+                  onValueChange={(value) =>
+                    setValue('category', value, { shouldValidate: true })
+                  }
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectGroup>
+                      {categories.map((category, index) => (
+                        <SelectItem key={index} value={category.value}>
+                          {category.label}
+                        </SelectItem>
+                      ))}
+                    </SelectGroup>
+                  </SelectContent>
+                </Select>
+                {errors.category && (
+                  <span className="text-red-500 text-xs mt-1 block">
+                    {errors.category.message}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* PRODUCT KEYWORDS */}
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>
+                  <span className="text-[#EE2932]">*</span> Product Keywords
+                </h2>
+              </div>
+              <div className="flex-1">
+                <Input
+                  type="text"
+                  placeholder="Product keywords"
+                  className="w-full h-10"
+                  {...register('productKeywords')}
+                />
+                <span className="text-xs text-gray-500 font-light italic mt-1 block">
+                  Note: Make sure keywords are separated by comma
+                </span>
+                {errors.productKeywords && (
+                  <span className="text-red-500 text-xs mt-1 block">
+                    {errors.productKeywords.message}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* DESCRIPTION */}
+            <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>
+                  <span className="text-[#EE2932]">*</span> Description
+                </h2>
+              </div>
+              <div className="flex-1 flex flex-col">
+                <Textarea
+                  placeholder="Description"
+                  className="w-full min-h-[120px] max-h-44 max-w-4xl resize-y"
+                  {...register('description')}
+                />
+                {errors.description && (
+                  <span className="text-red-500 text-xs mt-1 block">
+                    {errors.description.message}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            {/* BASE PRICE */}
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>
+                  <span className="text-[#EE2932]">*</span> Base Price
+                </h2>
+              </div>
+              <div className="flex-1 flex-col">
+                <div className="flex flex-row items-center space-x-2">
+                  <span className="text-lg font-bold text-gray-500">₹</span>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    step="0.01"
+                    min="0"
+                    className="w-auto h-10"
+                    {...register('basePrice')}
+                  />
+                </div>
+                <span className="text-xs text-gray-500 font-light italic mt-1 block">
+                  Note: prices must be in INR
+                </span>
+                {errors.basePrice && (
+                  <span className="text-red-500 text-xs mt-1 block">
+                    {errors.basePrice.message}
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>
+                  <span className="text-[#EE2932]">*</span> Check the following
+                  if applicable
+                </h2>
+              </div>
+              <div className="flex flex-wrap gap-4">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={variantsOpen}
+                    onCheckedChange={(checked) =>
+                      setValue('variantsOpen', Boolean(checked))
+                    }
+                    id="variants"
+                  />
+                  <label
+                    htmlFor="variants"
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Variants
+                  </label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    disabled
+                    checked={MOQOpen}
+                    onCheckedChange={(checked) =>
+                      setValue('MOQOpen', Boolean(checked))
+                    }
+                    id="moq"
+                  />
+                  <label
+                    htmlFor="moq"
+                    className="text-sm leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  >
+                    Minimum Order Quantity (coming soon)
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* PRODUCT IMAGES - Updated for multiple images */}
+            <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>
+                  <span className="text-[#EE2932]">*</span> Product Images
+                </h2>
+              </div>
+              <div className="flex-1 space-y-4">
+                <div className="flex items-center gap-4">
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="w-full h-10 cursor-pointer"
+                    onChange={handleImageUpload}
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    onClick={clearAllImages}
+                    disabled={productImages.length === 0}
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+                <span className="text-xs text-gray-500 font-light italic">
+                  Note: You can select multiple images (max 5, up to 5MB each)
+                </span>
+
+                {/* Image Previews */}
+                {imagePreviews.length > 0 && (
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
+                    {imagePreviews.map((preview, index) => (
+                      <div key={index} className="relative group">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={preview}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-24 object-cover border rounded-lg"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => removeImage(index)}
+                          className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                        >
+                          <X className="h-3 w-3" />
+                        </button>
+                        <span className="absolute bottom-1 left-1 bg-black bg-opacity-50 text-white text-xs px-1 rounded">
+                          {index + 1}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {productImages.length > 0 && (
+                  <span className="text-sm text-green-600">
+                    {productImages.length} image(s) selected
+                  </span>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Shipping Methods */}
+        <div className="flex justify-between items-center my-4">
+          <h2>
+            <span className="text-[#EE2932]">*</span> Shipping Methods
+          </h2>
+          <Button
+            type="button"
+            onClick={addShippingMethod}
+            className="h-8 px-4 bg-green hover:bg-green-800"
+          >
+            Add Method
+          </Button>
+        </div>
+
+        {shippingMethods.map((method, index) => (
+          <div
+            key={index}
+            className="border border-gray-300 rounded-lg p-4 bg-gray-50 mb-4"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  <span className="text-[#EE2932]">*</span> Method Name
+                </label>
+                <Input
+                  type="text"
+                  value={method.name}
+                  onChange={(e) =>
+                    updateShippingMethod(index, 'name', e.target.value)
+                  }
+                  placeholder="e.g., DHL Standard Delivery"
+                  className="w-full h-10"
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  <span className="text-[#EE2932]">*</span> Price (INR)
+                </label>
+                <Input
+                  type="number"
+                  value={method.price}
+                  onChange={(e) =>
+                    updateShippingMethod(
+                      index,
+                      'price',
+                      parseFloat(e.target.value) || 0
+                    )
+                  }
+                  placeholder="50"
+                  min="0"
+                  step="0.01"
+                  className="w-full h-10"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  <span className="text-[#EE2932]">*</span> Estimated Delivery
+                </label>
+                <Input
+                  type="text"
+                  value={method.estimatedDays}
+                  onChange={(e) =>
+                    updateShippingMethod(index, 'estimatedDays', e.target.value)
+                  }
+                  placeholder="e.g., 3-5 days"
+                  className="w-full h-10"
+                />
+              </div>
+              <div className="flex items-center space-x-4 pt-6">
+                <div className="flex items-center space-x-2">
+                  <Checkbox
+                    checked={method.isActive}
+                    onCheckedChange={(checked) =>
+                      updateShippingMethod(index, 'isActive', Boolean(checked))
+                    }
+                    id={`active-${index}`}
+                  />
+                  <label htmlFor={`active-${index}`} className="text-sm">
+                    Active
+                  </label>
+                </div>
+                {shippingMethods.length > 1 && (
+                  <Button
+                    type="button"
+                    onClick={() => removeShippingMethod(index)}
+                    variant="ghost"
+                    size="sm"
+                    className="text-red-500 hover:text-red-700"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium mb-1">
+                Description (Optional)
+              </label>
+              <Textarea
+                value={method.description}
+                onChange={(e) =>
+                  updateShippingMethod(index, 'description', e.target.value)
+                }
+                placeholder="Additional details about this shipping method"
+                className="w-full"
+                rows={2}
+              />
+            </div>
+          </div>
+        ))}
+
+        {/* Variants section */}
+        {variantsOpen && (
+          <div className="border-b border-gray-200 py-10">
+            <h1 className="text-2xl font-bold">Variants</h1>
+            <div className="space-y-6 mt-6">
+              {variants.map((variant, variantIndex) => (
+                <div
+                  key={variantIndex}
+                  className="border border-gray-400 rounded-lg p-6"
+                >
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Left Column - Variant Info */}
+                    <div className="space-y-6">
+                      <div className="flex flex-col md:flex-row md:items-center gap-2">
+                        <div className="w-full md:w-32 flex-shrink-0">
+                          <h2>
+                            <span className="text-[#EE2932]">*</span> Variant
+                            Title
+                          </h2>
+                        </div>
+                        <Input
+                          type="text"
+                          placeholder="Color, Size, etc."
+                          className="w-full h-10"
+                          value={variant.title}
+                          onChange={(e) =>
+                            updateVariant(variantIndex, 'title', e.target.value)
+                          }
+                        />
+                      </div>
+
+                      {/* Remove Variant Button */}
+                      {variants.length > 1 && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeVariant(variantIndex)}
+                          className="text-red-500 border-red-500"
+                        >
+                          Remove Variant
+                        </Button>
+                      )}
+                    </div>
+
+                    {/* Right Column - Variant Options */}
+                    <div className="space-y-4">
+                      <h3 className="font-medium">Variant Options</h3>
+                      {variant.options.map((option, optionIndex) => (
+                        <div
+                          key={optionIndex}
+                          className="space-y-2 p-3 border rounded"
+                        >
+                          <Input
+                            type="text"
+                            placeholder="Blue, Size 32, etc."
+                            className="w-full h-10"
+                            value={option.value}
+                            onChange={(e) =>
+                              updateVariantOption(
+                                variantIndex,
+                                optionIndex,
+                                'value',
+                                e.target.value
+                              )
+                            }
+                          />
+                          <div className="flex items-center gap-4">
+                            <div className="flex items-center space-x-2">
+                              <Checkbox
+                                checked={option.hasPrice}
+                                onCheckedChange={(checked) =>
+                                  updateVariantOption(
+                                    variantIndex,
+                                    optionIndex,
+                                    'hasPrice',
+                                    Boolean(checked)
+                                  )
+                                }
+                                id={`hasPrice-${variantIndex}-${optionIndex}`}
+                              />
+                              <label
+                                htmlFor={`hasPrice-${variantIndex}-${optionIndex}`}
+                                className="text-sm"
+                              >
+                                Has Price
+                              </label>
+                            </div>
+                            {option.hasPrice && (
+                              <Input
+                                type="number"
+                                placeholder="0.00"
+                                step="0.01"
+                                min="0"
+                                className="w-24 h-8"
+                                value={option.price || ''}
+                                onChange={(e) =>
+                                  updateVariantOption(
+                                    variantIndex,
+                                    optionIndex,
+                                    'price',
+                                    parseFloat(e.target.value) || 0
+                                  )
+                                }
+                              />
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        onClick={() => addVariantOption(variantIndex)}
+                        className="w-full"
+                      >
+                        + Add Option
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+
+              <div className="flex gap-4">
+                <Button
+                  type="button"
+                  onClick={addVariant}
+                  className="h-12 px-4 rounded-full bg-[#FF6C00] hover:bg-[#FF6C00]/90"
+                >
+                  Add Variant
+                </Button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <div className="flex justify-end mt-10">
+          <Button
+            type="submit"
+            disabled={isSubmitting}
+            className="h-10 px-4 bg-[#007350] hover:bg-[#007350]/90 rounded-lg"
+          >
+            {isSubmitting ? 'Creating Product...' : 'Post Product'}
+          </Button>
+        </div>
+      </form>
+    </>
+  )
+}
+
+export default Page

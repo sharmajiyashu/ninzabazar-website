@@ -1,0 +1,548 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+model User {
+  id                  String          @id @default(cuid())
+  email               String          @unique
+  password            String?
+  role                UserRole
+  firstName           String
+  lastName            String
+  middleName          String?
+  suffix              String?
+  contactNumber       String
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  profilePicture      String?
+  status              UserStatus      @default(ACTIVE)
+  dateOfBirth         String?
+  buyerProfile        BuyerProfile?
+  conversationsBuyer  Conversation[]  @relation("BuyerConversations")
+  conversationsSeller Conversation[]  @relation("SellerConversations")
+  messages            Message[]
+  messageStatuses     MessageStatus[]
+  oauthAccounts       OAuthAccount[]
+  reviews             Review[]
+  sellerProfile       SellerProfile?
+
+  @@index([role])
+}
+
+model Admin {
+  id        String   @id @default(cuid())
+  username  String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  password  String
+}
+
+model OAuthAccount {
+  id                String        @id @default(cuid())
+  provider          OAuthProvider
+  providerAccountId String
+  userId            String
+  accessToken       String?
+  refreshToken      String?
+  expiresAt         DateTime?
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime      @updatedAt
+  idToken           String?
+  user              User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model BuyerProfile {
+  id                String     @id @default(cuid())
+  userId            String     @unique
+  createdAt         DateTime   @default(now())
+  updatedAt         DateTime   @updatedAt
+  profilePicture    String?
+  emailVerified     Boolean    @default(false)
+  shippingAddresses Address[]
+  user              User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  Cart              Cart?
+  CartItem          CartItem[]
+  orders            Order[]
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+model SellerProfile {
+  id                       String              @id @default(cuid())
+  userId                   String              @unique
+  companyName              String
+  createdAt                DateTime            @default(now())
+  updatedAt                DateTime            @updatedAt
+  isVerified               Boolean             @default(false)
+  businessDocumentFile     String?
+  businessDocumentType     String?
+  businessEmail            String?
+  businessPhoneNumber      String?
+  businessRegisteredName   String?
+  businessType             String?
+  individualRegisteredName String?
+  shopName                 String?
+  returnsTerms             String?
+  sellerEmail              String?
+  sellerPhoneNumber        String?
+  shippingTerms            String?
+  description              String?             @default("")
+  storeStatus              String?             @default("waiting submission")
+  registeredAddress        Address?
+  CartItem                 CartItem[]
+  EscrowPayment            EscrowPayment[]
+  OrderItem                OrderItem[]
+  pickupAddress            PickupAddress?
+  products                 Product[]
+  user                     User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  SellerWallet             SellerWallet?
+  storeRatingSummary       StoreRatingSummary?
+}
+
+model Address {
+  id              String         @id @default(cuid())
+  street          String
+  city            String
+  state           String
+  postalCode      String
+  country         String
+  isDefault       Boolean        @default(false)
+  buyerProfileId  String?
+  sellerProfileId String?        @unique
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  label           String         @default("Other")
+  buyerProfile    BuyerProfile?  @relation(fields: [buyerProfileId], references: [id])
+  sellerProfile   SellerProfile? @relation(fields: [sellerProfileId], references: [id])
+  Order           Order[]
+
+  @@index([buyerProfileId])
+}
+
+model PickupAddress {
+  id              String         @id @default(cuid())
+  street          String
+  city            String
+  state           String
+  postalCode      String
+  country         String
+  isDefault       Boolean        @default(false)
+  sellerProfileId String?        @unique
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime
+  sellerProfile   SellerProfile? @relation(fields: [sellerProfileId], references: [id])
+
+  @@index([sellerProfileId])
+}
+
+model Cart {
+  id        String       @id @default(cuid())
+  buyerId   String       @unique
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
+  buyer     BuyerProfile @relation(fields: [buyerId], references: [id])
+  items     CartItem[]
+
+  @@index([buyerId])
+}
+
+model CartItem {
+  id                 String           @id @default(cuid())
+  cartId             String
+  productId          String
+  quantity           Int              @default(1)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+  variantCombination String[]
+  basePrice          Decimal          @db.Decimal(10, 2)
+  isSale             Boolean          @default(false)
+  name               String
+  salePrice          Decimal?         @db.Decimal(10, 2)
+  variantId          String?
+  buyerId            String
+  images             String
+  sellerId           String
+  buyer              BuyerProfile     @relation(fields: [buyerId], references: [id])
+  cart               Cart             @relation(fields: [cartId], references: [id])
+  product            Product          @relation(fields: [productId], references: [id])
+  seller             SellerProfile    @relation(fields: [sellerId], references: [id])
+  variants           ProductVariant[] @relation("CartItemToProductVariant")
+  shippingMethod     ShippingMethod[] @relation("CartItemToShippingMethod")
+
+  @@index([cartId])
+  @@index([productId])
+  @@index([buyerId])
+}
+
+model ShippingMethod {
+  id            String     @id @default(cuid())
+  productId     String
+  name          String
+  price         Float
+  estimatedDays String
+  description   String?
+  isActive      Boolean    @default(true)
+  createdAt     DateTime   @default(now())
+  updatedAt     DateTime   @updatedAt
+  product       Product    @relation(fields: [productId], references: [id], onDelete: Cascade)
+  CartItem      CartItem[] @relation("CartItemToShippingMethod")
+}
+
+model Product {
+  id              String           @id @default(cuid())
+  name            String
+  description     String
+  sellerId        String
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  basePrice       Decimal          @db.Decimal(10, 2)
+  category        String?
+  isSale          Boolean          @default(false)
+  salePrice       Decimal?         @db.Decimal(10, 2)
+  keywords        String[]
+  totalPurchases  Int              @default(0)
+  isActive        Boolean          @default(false)
+  adminApproved   Boolean          @default(false)
+  status          String           @default("pending")
+  CartItem        CartItem[]
+  conversations   Conversation[]
+  orderItems      OrderItem[]      @relation("ProductOrderItems")
+  seller          SellerProfile    @relation(fields: [sellerId], references: [id])
+  images          ProductImage[]
+  variants        ProductVariant[]
+  reviews         Review[]
+  shippingMethods ShippingMethod[]
+
+  @@index([sellerId])
+  @@index([name])
+}
+
+model ProductVariant {
+  id         String                @id @default(cuid())
+  title      String
+  option     String
+  price      Decimal               @db.Decimal(10, 2)
+  sku        String?
+  productId  String
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  hasPrice   Boolean               @default(false)
+  orderItems OrderItem[]
+  product    Product               @relation(fields: [productId], references: [id], onDelete: Cascade)
+  images     ProductVariantImage[]
+  CartItem   CartItem[]            @relation("CartItemToProductVariant")
+
+  @@index([productId])
+  @@index([sku])
+}
+
+model ProductImage {
+  id        String   @id @default(cuid())
+  urlpath   String
+  alt       String?
+  isDefault Boolean  @default(false)
+  productId String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@index([productId])
+}
+
+model ProductVariantImage {
+  id        String         @id @default(cuid())
+  urlpath   String
+  alt       String?
+  isDefault Boolean        @default(false)
+  variantId String
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+  variant   ProductVariant @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@index([variantId])
+}
+
+model Review {
+  id                 String        @id @default(cuid())
+  rating             Int
+  title              String?
+  comment            String
+  isVerifiedPurchase Boolean       @default(false)
+  userId             String
+  productId          String
+  helpfulCount       Int           @default(0)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  product            Product       @relation(fields: [productId], references: [id], onDelete: Cascade)
+  user               User          @relation(fields: [userId], references: [id])
+  images             ReviewImage[]
+  replies            ReviewReply[]
+
+  @@unique([userId, productId])
+  @@index([userId])
+  @@index([productId])
+  @@index([rating])
+}
+
+model ReviewImage {
+  id        String   @id @default(cuid())
+  urlpath   String
+  alt       String?
+  reviewId  String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  review    Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+}
+
+model ReviewReply {
+  id           String   @id @default(cuid())
+  comment      String
+  isFromSeller Boolean  @default(false)
+  reviewId     String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  review       Review   @relation(fields: [reviewId], references: [id], onDelete: Cascade)
+
+  @@index([reviewId])
+}
+
+model Order {
+  id                 String         @id @default(cuid())
+  status             String
+  totalAmount        Decimal        @db.Decimal(10, 2)
+  buyerId            String
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  deliveryVerifiedAt DateTime?
+  isPaymentReleased  Boolean        @default(false)
+  paymentId          String?
+  razorpayOrderId    String?
+  shippingAddressId  String?
+  trackingLink       String         @default("")
+  cancellationReason String?
+  EscrowPayment      EscrowPayment?
+  buyer              BuyerProfile   @relation(fields: [buyerId], references: [id])
+  shippingAddress    Address?       @relation(fields: [shippingAddressId], references: [id])
+  orderItems         OrderItem[]
+
+  @@index([buyerId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model OrderItem {
+  id                  String          @id @default(cuid())
+  quantity            Int
+  priceAtPurchase     Decimal         @db.Decimal(10, 2)
+  orderId             String
+  variantId           String?
+  productName         String
+  createdAt           DateTime        @default(now())
+  updatedAt           DateTime        @updatedAt
+  productId           String
+  shippingMethodName  String?
+  shippingMethodPrice Float           @default(0)
+  variantCombination  String[]
+  sellerId            String?
+  order               Order           @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product             Product         @relation("ProductOrderItems", fields: [productId], references: [id])
+  seller              SellerProfile?  @relation(fields: [sellerId], references: [id])
+  variant             ProductVariant? @relation(fields: [variantId], references: [id])
+
+  @@index([orderId])
+  @@index([variantId])
+  @@index([productId])
+}
+
+model Conversation {
+  id        String    @id @default(cuid())
+  buyerId   String
+  sellerId  String
+  productId String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  buyer     User      @relation("BuyerConversations", fields: [buyerId], references: [id])
+  product   Product?  @relation(fields: [productId], references: [id])
+  seller    User      @relation("SellerConversations", fields: [sellerId], references: [id])
+  messages  Message[] @relation("ConversationMessages")
+
+  @@index([buyerId])
+  @@index([sellerId])
+  @@index([productId])
+  @@index([createdAt])
+}
+
+model Message {
+  id             String              @id @default(cuid())
+  conversationId String
+  senderId       String
+  content        String?
+  messageType    MessageType         @default(TEXT)
+  sentAt         DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  conversation   Conversation        @relation("ConversationMessages", fields: [conversationId], references: [id])
+  sender         User                @relation(fields: [senderId], references: [id])
+  attachments    MessageAttachment[]
+  statuses       MessageStatus[]
+
+  @@index([conversationId])
+  @@index([senderId])
+  @@index([sentAt])
+}
+
+model MessageAttachment {
+  id         String   @id @default(cuid())
+  messageId  String
+  fileUrl    String
+  fileType   FileType
+  uploadedAt DateTime @default(now())
+  message    Message  @relation(fields: [messageId], references: [id], onDelete: Cascade)
+
+  @@index([messageId])
+  @@index([fileType])
+}
+
+model MessageStatus {
+  id        String     @id @default(cuid())
+  messageId String
+  userId    String
+  status    StatusType @default(SENT)
+  updatedAt DateTime   @updatedAt
+  message   Message    @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user      User       @relation(fields: [userId], references: [id])
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
+  @@index([status])
+}
+
+model StoreRating {
+  id        String   @id @default(cuid())
+  sellerId  String
+  buyerId   String
+  comment   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  rating    Int
+
+  @@unique([sellerId, buyerId])
+  @@index([sellerId])
+  @@index([buyerId])
+}
+
+model StoreRatingSummary {
+  id         String        @id @default(cuid())
+  sellerId   String        @unique
+  average    Float
+  totalCount Int
+  updatedAt  DateTime      @updatedAt
+  seller     SellerProfile @relation(fields: [sellerId], references: [id])
+}
+
+model EscrowPayment {
+  id                String        @id
+  orderId           String        @unique
+  buyerId           String
+  sellerId          String
+  amount            Decimal       @db.Decimal(10, 2)
+  razorpayPaymentId String
+  status            EscrowStatus  @default(HELD)
+  createdAt         DateTime      @default(now())
+  updatedAt         DateTime
+  releaseDate       DateTime?
+  releasedAt        DateTime?
+  Order             Order         @relation(fields: [orderId], references: [id])
+  SellerProfile     SellerProfile @relation(fields: [sellerId], references: [id])
+}
+
+model SellerWallet {
+  id               String        @id
+  sellerId         String        @unique
+  balance          Decimal       @default(0) @db.Decimal(10, 2)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime
+  availableBalance Decimal       @default(0) @db.Decimal(10, 2)
+  pendingBalance   Decimal       @default(0) @db.Decimal(10, 2)
+  SellerProfile    SellerProfile @relation(fields: [sellerId], references: [id])
+}
+
+enum UserRole {
+  BUYER
+  SELLER
+}
+
+enum OAuthProvider {
+  GOOGLE
+  APPLE
+}
+
+enum MessageType {
+  TEXT
+  IMAGE
+  VIDEO
+  FILE
+}
+
+enum FileType {
+  IMAGE
+  VIDEO
+  PDF
+  OTHER
+}
+
+enum StatusType {
+  SENT
+  DELIVERED
+  READ
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum EscrowStatus {
+  PENDING
+  HELD
+  RELEASED
+  REFUNDED
+  DISPUTED
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum TransactionType {
+  PAYMENT_RECEIVED
+  WITHDRAWAL
+  REFUND
+  ADJUSTMENT
+}
+
+enum StoreStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}

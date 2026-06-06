@@ -1,0 +1,575 @@
+E-commerce Platform Account Information
+Account Login Details
+Admin Account
+
+Username: admin@ecommerce.com
+Password: Admin123!
+Access: Full administrative privileges
+
+Buyer Account
+
+Email: buyer@example.com
+Password: 12345678
+Name: John Smith
+Role: BUYER
+
+Seller Account
+
+Email: seller@example.com
+Password: 12345678
+Name: Jane Doe
+Company Name: Doe Enterprises
+Role: SELLER
+
+====================================================
+
+-- Reset sequences and clear existing data (if needed)
+-- This helps avoid conflicts when inserting data with specific IDs
+TRUNCATE TABLE "User", "Admin", "BuyerProfile", "SellerProfile", "Address", "Product", 
+         "ProductVariant", "ProductImage", "ProductVariantImage", "Review", 
+         "ReviewImage", "ReviewReply", "Order", "OrderItem", "Conversation", 
+         "Message", "MessageAttachment", "MessageStatus", "OAuthAccount" CASCADE;
+
+-- Create Admin Account
+INSERT INTO "Admin" (id, username, password, "createdAt", "updatedAt") 
+VALUES ('clkadmin123456', 'admin@ecommerce.com', '$2a$10$hACwQ5/HQI6FhbIISOUTU.0lT93cYfD5Dr5YaQuQdiz.GMkBk9CYy', NOW(), NOW());
+-- Password is "Admin123!" - we're assuming these are hashed passwords
+
+-- Create User Accounts (1 buyer and 1 seller)
+-- Buyer User
+INSERT INTO "User" (id, email, password, role, "firstName", "lastName", "contactNumber", "createdAt", "updatedAt")
+VALUES (
+  'clkbuyer123456', 
+  'buyer@example.com', 
+  '$2a$10$hACwQ5/HQI6FhbIISOUTU.0lT93cYfD5Dr5YaQuQdiz.GMkBk9CYy', 
+  'BUYER', 
+  'John', 
+  'Smith', 
+  '+15551234567', 
+  NOW(), 
+  NOW()
+);
+
+-- Seller User
+INSERT INTO "User" (id, email, password, role, "firstName", "lastName", "contactNumber", "profilePicture", "createdAt", "updatedAt")
+VALUES (
+  'clkseller123456', 
+  'seller@example.com', 
+  '$2a$10$hACwQ5/HQI6FhbIISOUTU.0lT93cYfD5Dr5YaQuQdiz.GMkBk9CYy', 
+  'SELLER', 
+  'Jane', 
+  'Doe', 
+  '+15559876543',
+  'https://randomuser.me/api/portraits/women/65.jpg',
+  NOW(), 
+  NOW()
+);
+
+-- Create Buyer Profile
+INSERT INTO "BuyerProfile" (id, "userId", "createdAt", "updatedAt")
+VALUES ('clkbuyerprof123', 'clkbuyer123456', NOW(), NOW());
+
+-- Create Seller Profile
+INSERT INTO "SellerProfile" (id, "userId", "companyName", "createdAt", "updatedAt")
+VALUES ('clksellerprof123', 'clkseller123456', 'Doe Enterprises', NOW(), NOW());
+
+-- Create Addresses
+-- Buyer shipping address
+INSERT INTO "Address" (id, street, city, state, "postalCode", country, "isDefault", "buyerProfileId", "createdAt", "updatedAt")
+VALUES (
+  'clkbuyeraddr123', 
+  '123 Main St', 
+  'San Francisco', 
+  'CA', 
+  '94105', 
+  'USA', 
+  TRUE, 
+  'clkbuyerprof123', 
+  NOW(), 
+  NOW()
+);
+
+-- Seller business address
+INSERT INTO "Address" (id, street, city, state, "postalCode", country, "isDefault", "sellerProfileId", "createdAt", "updatedAt")
+VALUES (
+  'clkselleraddr123', 
+  '456 Market St', 
+  'San Francisco', 
+  'CA', 
+  '94103', 
+  'USA', 
+  TRUE, 
+  'clksellerprof123', 
+  NOW(), 
+  NOW()
+);
+
+-- Products for each category (10 categories with sample products)
+
+-- 1. APPAREL_CLOTHING
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-apparel1', 
+  'Premium Cotton T-Shirt', 
+  'High-quality cotton t-shirt with a comfortable fit and stylish design. Perfect for casual wear or layering.',
+  29.99, 
+  24.99, 
+  TRUE, 
+  'APPAREL_CLOTHING',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for apparel product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-app1', 'https://example.com/images/tshirt-main.jpg', 'Premium Cotton T-Shirt front view', TRUE, 'clkprod-apparel1', NOW(), NOW()),
+('clkprodimg-app2', 'https://example.com/images/tshirt-back.jpg', 'Premium Cotton T-Shirt back view', FALSE, 'clkprod-apparel1', NOW(), NOW());
+
+-- Size variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-tshirt-s', 'Size', 'Small', 24.99, 50, 'TS-SMALL-001', 'clkprod-apparel1', NOW(), NOW()),
+('clkvariant-tshirt-m', 'Size', 'Medium', 24.99, 75, 'TS-MED-001', 'clkprod-apparel1', NOW(), NOW()),
+('clkvariant-tshirt-l', 'Size', 'Large', 27.99, 60, 'TS-LARGE-001', 'clkprod-apparel1', NOW(), NOW()),
+('clkvariant-tshirt-xl', 'Size', 'X-Large', 29.99, 40, 'TS-XL-001', 'clkprod-apparel1', NOW(), NOW());
+
+-- Color variants (no price difference, just options)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-tshirt-black', 'Color', 'Black', 24.99, 75, 'TS-BLACK-001', 'clkprod-apparel1', NOW(), NOW()),
+('clkvariant-tshirt-white', 'Color', 'White', 24.99, 75, 'TS-WHITE-001', 'clkprod-apparel1', NOW(), NOW()),
+('clkvariant-tshirt-blue', 'Color', 'Blue', 24.99, 75, 'TS-BLUE-001', 'clkprod-apparel1', NOW(), NOW());
+
+-- Variant images
+INSERT INTO "ProductVariantImage" (id, url, alt, "isDefault", "variantId", "createdAt", "updatedAt")
+VALUES 
+('clkvarimg-tshirt-black', 'https://example.com/images/tshirt-black.jpg', 'T-Shirt in Black', TRUE, 'clkvariant-tshirt-black', NOW(), NOW()),
+('clkvarimg-tshirt-white', 'https://example.com/images/tshirt-white.jpg', 'T-Shirt in White', TRUE, 'clkvariant-tshirt-white', NOW(), NOW()),
+('clkvarimg-tshirt-blue', 'https://example.com/images/tshirt-blue.jpg', 'T-Shirt in Blue', TRUE, 'clkvariant-tshirt-blue', NOW(), NOW());
+
+-- 2. ELECTRONICS
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-electronic1', 
+  'Ultra-Slim Wireless Earbuds', 
+  'Bluetooth 5.0 earbuds with noise cancellation, touch controls, and long battery life. Perfect for workouts and daily use.',
+  99.99, 
+  NULL, 
+  FALSE, 
+  'ELECTRONICS',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for electronics product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-elec1', 'https://example.com/images/earbuds-main.jpg', 'Wireless Earbuds in case', TRUE, 'clkprod-electronic1', NOW(), NOW()),
+('clkprodimg-elec2', 'https://example.com/images/earbuds-detail.jpg', 'Wireless Earbuds close-up', FALSE, 'clkprod-electronic1', NOW(), NOW());
+
+-- Color variants for earbuds (with same price)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-earbuds-black', 'Color', 'Black', 99.99, 35, 'EB-BLACK-001', 'clkprod-electronic1', NOW(), NOW()),
+('clkvariant-earbuds-white', 'Color', 'White', 99.99, 30, 'EB-WHITE-001', 'clkprod-electronic1', NOW(), NOW());
+
+-- Feature variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-earbuds-std', 'Model', 'Standard', 99.99, 50, 'EB-STD-001', 'clkprod-electronic1', NOW(), NOW()),
+('clkvariant-earbuds-pro', 'Model', 'Pro (with ANC)', 129.99, 25, 'EB-PRO-001', 'clkprod-electronic1', NOW(), NOW());
+
+-- 3. FURNITURE_HOME_DECOR
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-furniture1', 
+  'Modern Coffee Table', 
+  'Contemporary coffee table with tempered glass top and solid wood legs. A perfect centerpiece for your living room.',
+  249.99, 
+  199.99, 
+  TRUE, 
+  'FURNITURE_HOME_DECOR',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for furniture product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-furn1', 'https://example.com/images/coffee-table-main.jpg', 'Modern Coffee Table front view', TRUE, 'clkprod-furniture1', NOW(), NOW()),
+('clkprodimg-furn2', 'https://example.com/images/coffee-table-angle.jpg', 'Modern Coffee Table angled view', FALSE, 'clkprod-furniture1', NOW(), NOW());
+
+-- Material variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-table-oak', 'Wood Type', 'Oak', 199.99, 15, 'CT-OAK-001', 'clkprod-furniture1', NOW(), NOW()),
+('clkvariant-table-walnut', 'Wood Type', 'Walnut', 229.99, 12, 'CT-WAL-001', 'clkprod-furniture1', NOW(), NOW()),
+('clkvariant-table-cherry', 'Wood Type', 'Cherry', 249.99, 8, 'CT-CHR-001', 'clkprod-furniture1', NOW(), NOW());
+
+-- Glass type variants (no price difference)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-table-clear', 'Glass Type', 'Clear', 199.99, 20, 'CT-CLR-001', 'clkprod-furniture1', NOW(), NOW()),
+('clkvariant-table-frosted', 'Glass Type', 'Frosted', 199.99, 15, 'CT-FRS-001', 'clkprod-furniture1', NOW(), NOW());
+
+-- 4. BEAUTY_PERSONAL_CARE
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-beauty1', 
+  'Luxury Facial Serum', 
+  'Advanced anti-aging serum with hyaluronic acid, vitamin C, and peptides. Helps reduce fine lines and improve skin texture.',
+  69.99, 
+  59.99, 
+  TRUE, 
+  'BEAUTY_PERSONAL_CARE',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for beauty product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-beauty1', 'https://example.com/images/serum-bottle.jpg', 'Luxury Facial Serum bottle', TRUE, 'clkprod-beauty1', NOW(), NOW());
+
+-- Size variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-serum-small', 'Size', '30ml', 59.99, 45, 'FS-30ML-001', 'clkprod-beauty1', NOW(), NOW()),
+('clkvariant-serum-large', 'Size', '50ml', 89.99, 30, 'FS-50ML-001', 'clkprod-beauty1', NOW(), NOW());
+
+-- Formula variants (no price difference)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-serum-normal', 'Formula', 'Normal Skin', 59.99, 25, 'FS-NORM-001', 'clkprod-beauty1', NOW(), NOW()),
+('clkvariant-serum-dry', 'Formula', 'Dry Skin', 59.99, 25, 'FS-DRY-001', 'clkprod-beauty1', NOW(), NOW()),
+('clkvariant-serum-oily', 'Formula', 'Oily Skin', 59.99, 25, 'FS-OILY-001', 'clkprod-beauty1', NOW(), NOW());
+
+-- 5. SPORTS_FITNESS
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-sports1', 
+  'Premium Yoga Mat', 
+  'Extra thick, non-slip yoga mat made from eco-friendly materials. Ideal for yoga, pilates, and other floor exercises.',
+  45.99, 
+  NULL, 
+  FALSE, 
+  'SPORTS_FITNESS',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for sports product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-sport1', 'https://example.com/images/yoga-mat-flat.jpg', 'Premium Yoga Mat unrolled', TRUE, 'clkprod-sports1', NOW(), NOW()),
+('clkprodimg-sport2', 'https://example.com/images/yoga-mat-rolled.jpg', 'Premium Yoga Mat rolled up', FALSE, 'clkprod-sports1', NOW(), NOW());
+
+-- Thickness variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-yoga-regular', 'Thickness', '4mm', 45.99, 60, 'YM-4MM-001', 'clkprod-sports1', NOW(), NOW()),
+('clkvariant-yoga-thick', 'Thickness', '6mm', 55.99, 40, 'YM-6MM-001', 'clkprod-sports1', NOW(), NOW()),
+('clkvariant-yoga-ultra', 'Thickness', '8mm', 65.99, 30, 'YM-8MM-001', 'clkprod-sports1', NOW(), NOW());
+
+-- Color variants (no price difference)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-yoga-purple', 'Color', 'Purple', 45.99, 25, 'YM-PUR-001', 'clkprod-sports1', NOW(), NOW()),
+('clkvariant-yoga-blue', 'Color', 'Blue', 45.99, 25, 'YM-BLU-001', 'clkprod-sports1', NOW(), NOW()),
+('clkvariant-yoga-black', 'Color', 'Black', 45.99, 25, 'YM-BLK-001', 'clkprod-sports1', NOW(), NOW());
+
+-- 6. COMPUTERS_ACCESSORIES
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-computer1', 
+  'Ergonomic Mechanical Keyboard', 
+  'Professional mechanical keyboard with customizable RGB lighting, programmable keys, and comfortable wrist rest.',
+  129.99, 
+  109.99, 
+  TRUE, 
+  'COMPUTERS_ACCESSORIES',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for computer accessory product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-comp1', 'https://example.com/images/keyboard-top.jpg', 'Mechanical Keyboard top view', TRUE, 'clkprod-computer1', NOW(), NOW()),
+('clkprodimg-comp2', 'https://example.com/images/keyboard-angle.jpg', 'Mechanical Keyboard angled view', FALSE, 'clkprod-computer1', NOW(), NOW());
+
+-- Switch type variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-kb-blue', 'Switch Type', 'Blue (Clicky)', 109.99, 30, 'KB-BLUE-001', 'clkprod-computer1', NOW(), NOW()),
+('clkvariant-kb-red', 'Switch Type', 'Red (Linear)', 109.99, 30, 'KB-RED-001', 'clkprod-computer1', NOW(), NOW()),
+('clkvariant-kb-brown', 'Switch Type', 'Brown (Tactile)', 109.99, 30, 'KB-BRN-001', 'clkprod-computer1', NOW(), NOW()),
+('clkvariant-kb-silent', 'Switch Type', 'Silent Red', 119.99, 20, 'KB-SLNT-001', 'clkprod-computer1', NOW(), NOW());
+
+-- Layout variants (no price difference)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-kb-us', 'Layout', 'US QWERTY', 109.99, 50, 'KB-US-001', 'clkprod-computer1', NOW(), NOW()),
+('clkvariant-kb-uk', 'Layout', 'UK QWERTY', 109.99, 25, 'KB-UK-001', 'clkprod-computer1', NOW(), NOW());
+
+-- 7. JEWELRY_ACCESSORIES
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-jewelry1', 
+  'Sterling Silver Pendant Necklace', 
+  'Elegant sterling silver pendant with adjustable chain length. Perfect for everyday wear or special occasions.',
+  89.99, 
+  NULL, 
+  FALSE, 
+  'JEWELRY_ACCESSORIES',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for jewelry product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-jewel1', 'https://example.com/images/necklace-front.jpg', 'Silver Pendant Necklace front view', TRUE, 'clkprod-jewelry1', NOW(), NOW()),
+('clkprodimg-jewel2', 'https://example.com/images/necklace-worn.jpg', 'Silver Pendant Necklace on model', FALSE, 'clkprod-jewelry1', NOW(), NOW());
+
+-- Chain length variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-necklace-16', 'Chain Length', '16 inches', 89.99, 25, 'NL-16IN-001', 'clkprod-jewelry1', NOW(), NOW()),
+('clkvariant-necklace-18', 'Chain Length', '18 inches', 94.99, 30, 'NL-18IN-001', 'clkprod-jewelry1', NOW(), NOW()),
+('clkvariant-necklace-20', 'Chain Length', '20 inches', 99.99, 20, 'NL-20IN-001', 'clkprod-jewelry1', NOW(), NOW());
+
+-- Pendant style variants (no price difference)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-pendant-circle', 'Pendant Style', 'Circle', 89.99, 15, 'NL-CIR-001', 'clkprod-jewelry1', NOW(), NOW()),
+('clkvariant-pendant-heart', 'Pendant Style', 'Heart', 89.99, 15, 'NL-HRT-001', 'clkprod-jewelry1', NOW(), NOW()),
+('clkvariant-pendant-star', 'Pendant Style', 'Star', 89.99, 15, 'NL-STR-001', 'clkprod-jewelry1', NOW(), NOW());
+
+-- 8. KITCHEN_DINING
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-kitchen1', 
+  'Professional Chef Knife Set', 
+  '5-piece premium knife set with German steel blades and ergonomic handles. Includes chef, bread, utility, paring knives and scissors.',
+  199.99, 
+  179.99, 
+  TRUE, 
+  'KITCHEN_DINING',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for kitchen product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-kitchen1', 'https://example.com/images/knife-set.jpg', 'Chef Knife Set in block', TRUE, 'clkprod-kitchen1', NOW(), NOW()),
+('clkprodimg-kitchen2', 'https://example.com/images/knife-detail.jpg', 'Chef Knife detail', FALSE, 'clkprod-kitchen1', NOW(), NOW());
+
+-- Piece count variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-knife-5pc', 'Set Size', '5-Piece Set', 179.99, 25, 'KS-5PC-001', 'clkprod-kitchen1', NOW(), NOW()),
+('clkvariant-knife-7pc', 'Set Size', '7-Piece Set', 229.99, 20, 'KS-7PC-001', 'clkprod-kitchen1', NOW(), NOW()),
+('clkvariant-knife-10pc', 'Set Size', '10-Piece Set', 299.99, 15, 'KS-10PC-001', 'clkprod-kitchen1', NOW(), NOW());
+
+-- Handle material variants (no price difference)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-knife-wood', 'Handle Material', 'Wood', 179.99, 20, 'KS-WOOD-001', 'clkprod-kitchen1', NOW(), NOW()),
+('clkvariant-knife-plastic', 'Handle Material', 'Composite', 179.99, 20, 'KS-COMP-001', 'clkprod-kitchen1', NOW(), NOW());
+
+-- 9. TOYS_GAMES
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-toys1', 
+  'Building Blocks Educational Set', 
+  'Creative building blocks set with 250+ pieces. Helps develop fine motor skills, spatial reasoning, and creativity. Ages 4-12.',
+  39.99, 
+  34.99, 
+  TRUE, 
+  'TOYS_GAMES',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for toy product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-toy1', 'https://example.com/images/blocks-set.jpg', 'Building Blocks complete set', TRUE, 'clkprod-toys1', NOW(), NOW()),
+('clkprodimg-toy2', 'https://example.com/images/blocks-built.jpg', 'Building Blocks example creation', FALSE, 'clkprod-toys1', NOW(), NOW());
+
+-- Piece count variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-blocks-small', 'Set Size', '250 Pieces', 34.99, 40, 'BB-250-001', 'clkprod-toys1', NOW(), NOW()),
+('clkvariant-blocks-medium', 'Set Size', '500 Pieces', 59.99, 35, 'BB-500-001', 'clkprod-toys1', NOW(), NOW()),
+('clkvariant-blocks-large', 'Set Size', '1000 Pieces', 99.99, 20, 'BB-1000-001', 'clkprod-toys1', NOW(), NOW());
+
+-- Theme variants (no price difference)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-blocks-classic', 'Theme', 'Classic', 34.99, 30, 'BB-CLSC-001', 'clkprod-toys1', NOW(), NOW()),
+('clkvariant-blocks-space', 'Theme', 'Space', 34.99, 25, 'BB-SPCE-001', 'clkprod-toys1', NOW(), NOW()),
+('clkvariant-blocks-city', 'Theme', 'City', 34.99, 25, 'BB-CITY-001', 'clkprod-toys1', NOW(), NOW());
+
+-- 10. HEALTH_WELLNESS
+INSERT INTO "Product" (id, name, description, "basePrice", "salePrice", "isSale", category, "sellerId", "createdAt", "updatedAt")
+VALUES (
+  'clkprod-health1', 
+  'Smart Fitness Tracker', 
+  'Advanced fitness tracker with heart rate monitoring, sleep tracking, step counter, and smartphone notifications. Water-resistant design.',
+  89.99, 
+  79.99, 
+  TRUE, 
+  'HEALTH_WELLNESS',
+  'clksellerprof123',
+  NOW(), 
+  NOW()
+);
+
+-- Images for health product
+INSERT INTO "ProductImage" (id, url, alt, "isDefault", "productId", "createdAt", "updatedAt")
+VALUES 
+('clkprodimg-health1', 'https://example.com/images/fitness-tracker.jpg', 'Smart Fitness Tracker face view', TRUE, 'clkprod-health1', NOW(), NOW()),
+('clkprodimg-health2', 'https://example.com/images/fitness-tracker-app.jpg', 'Smart Fitness Tracker app interface', FALSE, 'clkprod-health1', NOW(), NOW());
+
+-- Feature variants (with price differences)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-tracker-basic', 'Model', 'Basic', 79.99, 50, 'FT-BASIC-001', 'clkprod-health1', NOW(), NOW()),
+('clkvariant-tracker-premium', 'Model', 'Premium (GPS)', 99.99, 35, 'FT-PREM-001', 'clkprod-health1', NOW(), NOW()),
+('clkvariant-tracker-pro', 'Model', 'Pro (GPS + ECG)', 129.99, 25, 'FT-PRO-001', 'clkprod-health1', NOW(), NOW());
+
+-- Band color variants (no price difference)
+INSERT INTO "ProductVariant" (id, title, option, price, "stockQuantity", sku, "productId", "createdAt", "updatedAt")
+VALUES 
+('clkvariant-tracker-black', 'Band Color', 'Black', 79.99, 40, 'FT-BLK-001', 'clkprod-health1', NOW(), NOW()),
+('clkvariant-tracker-blue', 'Band Color', 'Blue', 79.99, 30, 'FT-BLU-001', 'clkprod-health1', NOW(), NOW()),
+('clkvariant-tracker-pink', 'Band Color', 'Pink', 79.99, 30, 'FT-PNK-001', 'clkprod-health1', NOW(), NOW());
+
+-- Create Orders & Order Items
+INSERT INTO "Order" (id, status, "totalAmount", "buyerId", "createdAt", "updatedAt")
+VALUES 
+('clkorder1001', 'COMPLETED', 78.98, 'clkbuyerprof123', NOW() - INTERVAL '30 days', NOW() - INTERVAL '28 days'),
+('clkorder1002', 'PROCESSING', 185.99, 'clkbuyerprof123', NOW() - INTERVAL '3 days', NOW() - INTERVAL '2 days');
+
+-- Order Items for the completed order
+INSERT INTO "OrderItem" (id, quantity, "priceAtPurchase", "orderId", "variantId", "productName", "variantTitle", "variantOption", "createdAt", "updatedAt")
+VALUES 
+('clkorderitem1001', 2, 24.99, 'clkorder1001', 'clkvariant-tshirt-s', 'Premium Cotton T-Shirt', 'Size', 'Small', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days'),
+('clkorderitem1002', 1, 29.00, 'clkorder1001', 'clkvariant-tracker-basic', 'Smart Fitness Tracker', 'Model', 'Basic', NOW() - INTERVAL '30 days', NOW() - INTERVAL '30 days');
+
+-- Order Items for the processing order
+INSERT INTO "OrderItem" (id, quantity, "priceAtPurchase", "orderId", "variantId", "productName", "variantTitle", "variantOption", "createdAt", "updatedAt")
+VALUES 
+('clkorderitem2001', 1, 55.99, 'clkorder1002', 'clkvariant-yoga-thick', 'Premium Yoga Mat', 'Thickness', '6mm', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days'),
+('clkorderitem2002', 1, 129.99, 'clkorder1002', 'clkvariant-tracker-pro', 'Smart Fitness Tracker', 'Model', 'Pro (GPS + ECG)', NOW() - INTERVAL '3 days', NOW() - INTERVAL '3 days');
+
+-- Create Reviews
+INSERT INTO "Review" (id, rating, title, comment, "isVerifiedPurchase", "userId", "productId", "helpfulCount", "createdAt", "updatedAt")
+VALUES (
+  'clkreview1001',
+  5,
+  'Perfect fit and so comfortable!',
+  'I absolutely love this t-shirt. The cotton quality is excellent and it fits true to size. Washed it a few times and still looks brand new.',
+  TRUE,
+  'clkbuyer123456',
+  'clkprod-apparel1',
+  12,
+  NOW() - INTERVAL '20 days',
+  NOW() - INTERVAL '20 days'
+);
+
+-- Review images
+INSERT INTO "ReviewImage" (id, url, alt, "reviewId", "createdAt", "updatedAt")
+VALUES ('clkrevimg1001', 'https://example.com/images/review-tshirt.jpg', 'T-shirt review photo', 'clkreview1001', NOW() - INTERVAL '20 days', NOW() - INTERVAL '20 days');
+
+-- Review Replies
+INSERT INTO "ReviewReply" (id, comment, "isFromSeller", "reviewId", "createdAt", "updatedAt")
+VALUES (
+  'clkrevrep1001',
+  'Thank you so much for your kind review! We''re thrilled you love the quality of our t-shirts.',
+  TRUE,
+  'clkreview1001',
+  NOW() - INTERVAL '19 days',
+  NOW() - INTERVAL '19 days'
+);
+
+-- Create Conversations
+INSERT INTO "Conversation" (id, "buyerId", "sellerId", "productId", "createdAt", "updatedAt")
+VALUES ('clkconv1001', 'clkbuyer123456', 'clkseller123456', 'clkprod-apparel1', NOW() - INTERVAL '25 days', NOW() - INTERVAL '23 days');
+
+-- Create Messages
+INSERT INTO "Message" (id, "conversationId", "senderId", content, "messageType", "sentAt", "updatedAt")
+VALUES 
+(
+  'clkmsg1001',
+  'clkconv1001',
+  'clkbuyer123456',
+  'Hi there! I was wondering if the Small size would fit someone who is 5''6" and 130 lbs?',
+  'TEXT',
+  NOW() - INTERVAL '25 days',
+  NOW() - INTERVAL '25 days'
+),
+(
+  'clkmsg1002',
+  'clkconv1001',
+  'clkseller123456',
+  'Hello! Yes, the Small size should fit perfectly for your height and weight. It has a slightly slim fit, but not too tight.',
+  'TEXT',
+  NOW() - INTERVAL '24 days',
+  NOW() - INTERVAL '24 days'
+),
+(
+  'clkmsg1003',
+  'clkconv1001',
+  'clkbuyer123456',
+  'Great, thank you! I''ll place my order now.',
+  'TEXT',
+  NOW() - INTERVAL '24 days',
+  NOW() - INTERVAL '24 days'
+),
+(
+  'clkmsg1004',
+  'clkconv1001',
+  'clkseller123456',
+  'You''re welcome! If you have any other questions, feel free to ask.',
+  'TEXT',
+  NOW() - INTERVAL '23 days',
+  NOW() - INTERVAL '23 days'
+);
+
+-- Message Status
+INSERT INTO "MessageStatus" (id, "messageId", "userId", status, "updatedAt")
+VALUES 
+('clkmsgstat1001', 'clkmsg1001', 'clkseller123456', 'READ', NOW() - INTERVAL '24 days'),
+('clkmsgstat1002', 'clkmsg1002', 'clkbuyer123456', 'READ', NOW() - INTERVAL '24 days'),
+('clkmsgstat1003', 'clkmsg1003', 'clkseller123456', 'READ', NOW() - INTERVAL '23 days'),
+('clkmsgstat1004', 'clkmsg1004', 'clkbuyer123456', 'READ', NOW() - INTERVAL '23 days');
+
+-- Add Message Attachment
+INSERT INTO "MessageAttachment" (id, "messageId", "fileUrl", "fileType", "uploadedAt")
+VALUES ('clkmsgattach1001', 'clkmsg1002', 'https://example.com/attachments/size-chart.pdf', 'PDF', NOW() - INTERVAL '24 days');
+
+-- Create OAuth Account (for demonstration)
+INSERT INTO "OAuthAccount" (id, provider, "providerAccountId", "userId", "accessToken", "createdAt", "updatedAt")
+VALUES (
+  'clkoauth1001',
+  'GOOGLE',
+  'google-12345678',
+  'clkbuyer123456',
+  'ya29.example-access-token-value',
+  NOW() - INTERVAL '60 days',
+  NOW() - INTERVAL '60 days'
+);
