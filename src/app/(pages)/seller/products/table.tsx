@@ -82,17 +82,25 @@ export function DataTable<TData extends { id: string }, TValue>({
     }
   }
 
+  const totalRows = table.getFilteredRowModel().rows.length
+  const pageIndex = table.getState().pagination.pageIndex
+  const pageSize = table.getState().pagination.pageSize
+  const startRow = totalRows > 0 ? pageIndex * pageSize + 1 : 0
+  const endRow = Math.min((pageIndex + 1) * pageSize, totalRows)
+
   return (
-    <div className="w-full bg-white rounded-lg shadow">
-      <div className="flex items-center justify-between px-4 py-2">
-        <span className="text-sm text-muted-foreground">
-          {selectedRows.length} selected
+    <div className="w-full bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <span className="text-sm text-muted-foreground font-medium">
+          {selectedRows.length} item{selectedRows.length !== 1 ? 's' : ''} selected
         </span>
         <Dialog open={openConfirm} onOpenChange={setOpenConfirm}>
           <DialogTrigger asChild>
             <Button
               variant="destructive"
+              size="sm"
               disabled={selectedRows.length === 0 || isDeleting}
+              className="rounded-lg shadow-sm"
             >
               {isDeleting ? 'Deleting...' : 'Delete Selected'}
             </Button>
@@ -153,61 +161,72 @@ export function DataTable<TData extends { id: string }, TValue>({
         </Dialog>
       </div>
 
-      <Table>
-        <TableHeader>
-          {table.getHeaderGroups().map((headerGroup) => (
-            <TableRow key={headerGroup.id}>
-              {headerGroup.headers.map((header) => (
-                <TableHead key={header.id}>
-                  {header.isPlaceholder
-                    ? null
-                    : flexRender(
+      <div className="overflow-x-auto">
+        <Table>
+          <TableHeader className="bg-gray-50/50">
+            {table.getHeaderGroups().map((headerGroup) => (
+              <TableRow key={headerGroup.id} className="hover:bg-transparent">
+                {headerGroup.headers.map((header) => (
+                  <TableHead key={header.id} className="text-gray-600 font-semibold h-12">
+                    {header.isPlaceholder
+                      ? null
+                      : flexRender(
                         header.column.columnDef.header,
                         header.getContext()
                       )}
-                </TableHead>
-              ))}
-            </TableRow>
-          ))}
-        </TableHeader>
-        <TableBody>
-          {table.getRowModel().rows.length ? (
-            table.getRowModel().rows.map((row) => (
-              <TableRow key={row.id}>
-                {row.getVisibleCells().map((cell) => (
-                  <TableCell key={cell.id}>
-                    {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                  </TableCell>
+                  </TableHead>
                 ))}
               </TableRow>
-            ))
-          ) : (
-            <TableRow>
-              <TableCell colSpan={columns.length} className="text-center py-6">
-                No products found.
-              </TableCell>
-            </TableRow>
-          )}
-        </TableBody>
-      </Table>
+            ))}
+          </TableHeader>
+          <TableBody>
+            {table.getRowModel().rows.length ? (
+              table.getRowModel().rows.map((row) => (
+                <TableRow
+                  key={row.id}
+                  className="transition-colors hover:bg-gray-50/50 data-[state=selected]:bg-gray-50"
+                >
+                  {row.getVisibleCells().map((cell) => (
+                    <TableCell key={cell.id} className="py-2.5 px-4">
+                      {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              ))
+            ) : (
+              <TableRow>
+                <TableCell colSpan={columns.length} className="h-32 text-center">
+                  <div className="flex flex-col items-center justify-center text-gray-500">
+                    <p className="text-base font-medium text-gray-900 mt-2">No products found</p>
+                    <p className="text-sm mt-1">Try adjusting your filters or search query.</p>
+                  </div>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </div>
 
-      <div className="flex justify-between items-center px-4 py-2">
-        <span className="text-sm text-muted-foreground">
-          Page {table.getState().pagination.pageIndex + 1} of{' '}
-          {table.getPageCount()}
+      <div className="flex flex-col sm:flex-row justify-between items-center px-4 py-3 border-t border-gray-100 gap-4">
+        <span className="text-sm text-gray-500 font-medium">
+          {totalRows > 0 ? `Showing ${startRow} to ${endRow} of ${totalRows} results` : 'No results'}
         </span>
         <div className="flex gap-2">
           <Button
             variant="outline"
+            size="sm"
             onClick={() => table.previousPage()}
             disabled={!table.getCanPreviousPage()}
+            className="text-gray-600 border-gray-200 hover:bg-gray-50 shadow-sm"
           >
             Previous
           </Button>
           <Button
             variant="outline"
+            size="sm"
             onClick={() => table.nextPage()}
             disabled={!table.getCanNextPage()}
+            className="text-gray-600 border-gray-200 hover:bg-gray-50 shadow-sm"
           >
             Next
           </Button>
