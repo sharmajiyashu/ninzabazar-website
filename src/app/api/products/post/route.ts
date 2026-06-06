@@ -13,6 +13,7 @@ export async function POST(req: Request) {
     // Extract product data
     const productName = formData.get('name') as string
     const productCategory = formData.get('category') as string
+    const productSubCategory = formData.get('subCategory') as string | null
     const productKeywords = formData.get('keywords') as string
     const description = formData.get('description') as string
     const basePrice = formData.get('basePrice') as string
@@ -263,6 +264,7 @@ export async function POST(req: Request) {
         keywords: keywordsArray,
         description,
         category: productCategory,
+        subCategory: productSubCategory && productSubCategory !== 'none' ? productSubCategory : null,
         basePrice: parseFloat(basePrice),
         sellerId: seller.sellerProfile.id,
         images: {

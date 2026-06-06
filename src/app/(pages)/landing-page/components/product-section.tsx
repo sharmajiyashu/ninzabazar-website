@@ -116,10 +116,7 @@ const ProductSection = () => {
     <div className="flex flex-col gap-14 font-sans my-10 select-none">
       {/* 1. Trending Categories */}
       <div>
-        <h2
-          className="select-none text-[#181A20] mb-8"
-          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '36px', lineHeight: '28px', letterSpacing: '0%' }}
-        >
+        <h2 className="select-none text-[#181A20] mb-8 text-2xl md:text-[28px] font-semibold">
           Trending Categories
         </h2>
         <div className="grid grid-cols-2 md:grid-cols-4 gap-8">
@@ -129,17 +126,24 @@ const ProductSection = () => {
             { name: 'Accessories', img: '/img/handbag.png' },
             { name: 'Sports & Entertainment', img: '/img/sports_equipment.png' },
           ].map((cat, idx) => (
-            <div key={idx} className="flex flex-col items-center gap-4 cursor-pointer group">
-              <div className="w-40 h-40 rounded-full bg-[#d7f5e8] flex items-center justify-center border-2 border-transparent group-hover:border-[#006d44] transition-all duration-300 overflow-hidden shadow-sm relative p-4">
-                <Image
-                  src={cat.img}
-                  alt={cat.name}
-                  width={110}
-                  height={110}
-                  className="object-contain transition-transform duration-300 group-hover:scale-110"
-                />
+            <div key={idx} className="flex flex-col items-center cursor-pointer group mt-6">
+              {/* Arch Container */}
+              <div className="relative w-32 h-28 md:w-44 md:h-36">
+                <div className="absolute inset-0 bg-[#a7ebd1] rounded-t-[100px] shadow-sm transition-colors duration-300 group-hover:bg-[#8ee1c2]"></div>
+
+                {/* Floating Image */}
+                <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-28 h-32 md:w-36 md:h-40 flex items-end justify-center pb-2">
+                  <div className="relative w-full h-full">
+                    <Image
+                      src={cat.img}
+                      alt={cat.name}
+                      fill
+                      className="object-contain object-bottom transition-transform duration-300 group-hover:-translate-y-2 drop-shadow-md"
+                    />
+                  </div>
+                </div>
               </div>
-              <h3 className="font-bold text-gray-700 text-sm group-hover:text-[#006d44] transition-colors">
+              <h3 className="font-bold text-gray-700 text-sm mt-4 group-hover:text-[#006d44] transition-colors text-center">
                 {cat.name}
               </h3>
             </div>
@@ -150,8 +154,8 @@ const ProductSection = () => {
       {/* 2. Featured Products Grid */}
       <div>
         <h2
-          className="select-none text-[#181A20] mb-6"
-          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '36px', lineHeight: '28px', letterSpacing: '0%' }}
+          className="select-none text-[#181A20] mb-6 text-2xl md:text-[28px] font-semibold"
+          style={{ fontFamily: "'Poppins', sans-serif" }}
         >
           Featured Products
         </h2>
@@ -165,8 +169,8 @@ const ProductSection = () => {
       {/* 3. Apparel & Fashion Grid */}
       <div>
         <h2
-          className="select-none text-[#181A20] mb-6"
-          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '36px', lineHeight: '28px', letterSpacing: '0%' }}
+          className="select-none text-[#181A20] mb-6 text-2xl md:text-[28px] font-semibold"
+          style={{ fontFamily: "'Poppins', sans-serif" }}
         >
           Apparel & Fashion
         </h2>
@@ -180,8 +184,8 @@ const ProductSection = () => {
       {/* 4. Air Cleaning Equipment Grid */}
       <div>
         <h2
-          className="select-none text-[#181A20] mb-6"
-          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '36px', lineHeight: '28px', letterSpacing: '0%' }}
+          className="select-none text-[#181A20] mb-6 text-2xl md:text-[28px] font-semibold"
+          style={{ fontFamily: "'Poppins', sans-serif" }}
         >
           Air Cleaning Equipment
         </h2>
@@ -195,8 +199,8 @@ const ProductSection = () => {
       {/* 5. Sports & Entertainment Grid */}
       <div>
         <h2
-          className="select-none text-[#181A20] mb-6"
-          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '36px', lineHeight: '28px', letterSpacing: '0%' }}
+          className="select-none text-[#181A20] mb-6 text-2xl md:text-[28px] font-semibold"
+          style={{ fontFamily: "'Poppins', sans-serif" }}
         >
           Sports & Entertainment
         </h2>
@@ -210,8 +214,8 @@ const ProductSection = () => {
       {/* 6. Beauty & Health Grid */}
       <div>
         <h2
-          className="select-none text-[#181A20] mb-6"
-          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '36px', lineHeight: '28px', letterSpacing: '0%' }}
+          className="select-none text-[#181A20] mb-6 text-2xl md:text-[28px] font-semibold"
+          style={{ fontFamily: "'Poppins', sans-serif" }}
         >
           Beauty & Health
         </h2>

@@ -107,13 +107,11 @@ const NavBar = () => {
   }, [showDropdown])
 
   return (
-    <header
-      className="flex items-center justify-between bg-white border-b border-[#DDDDDD] shadow-[0px_4px_4px_rgba(0,0,0,0.05)] w-full px-6 md:px-16 lg:px-24 xl:px-40 select-none transition-all duration-300"
-      style={{
-        boxSizing: 'border-box',
-        height: '134px'
-      }}
-    >
+    <header className="bg-white border-b border-[#DDDDDD] shadow-[0px_4px_4px_rgba(0,0,0,0.05)] w-full select-none transition-all duration-300">
+      <div 
+        className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between w-full h-[134px]"
+        style={{ boxSizing: 'border-box' }}
+      >
       {/* Name / Logo group (Group 1171277265) */}
       <div className="flex items-center gap-4">
         <Link href={'/'}>
@@ -280,6 +278,7 @@ const NavBar = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         )}
+      </div>
       </div>
     </header>
 

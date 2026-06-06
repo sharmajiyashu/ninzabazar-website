@@ -62,9 +62,9 @@ const ProductDeals = () => {
   return (
     <div className="w-full max-w-[1241px] mx-auto my-10 font-sans">
       <div className="mb-6 flex items-center">
-        <h2 
-          className="select-none text-[#181A20]"
-          style={{ fontFamily: "'Poppins', sans-serif", fontWeight: 600, fontSize: '36px', lineHeight: '28px', letterSpacing: '0%' }}
+        <h2
+          className="select-none text-[#181A20] text-2xl md:text-[28px] font-semibold"
+          style={{ fontFamily: "'Poppins', sans-serif" }}
         >
           Today&apos;s Best Deals
         </h2>

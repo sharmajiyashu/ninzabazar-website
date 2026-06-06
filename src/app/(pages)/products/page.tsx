@@ -14,18 +14,19 @@ const ProductsContent = () => {
   const searchParams = useSearchParams()
   const query = searchParams.get('query') || ''
   const category = searchParams.get('category') || ''
+  const subCategory = searchParams.get('subCategory') || ''
   const popular = searchParams.get('popular') === 'true' // Check for popular parameter
 
   const showRandomProducts = !query && !category && !popular
   const showPopularProducts = popular
 
   const { data: searchedProducts = [] } = useQuery({
-    queryKey: ['products', query, category],
+    queryKey: ['products', query, category, subCategory],
     queryFn: async () => {
-      console.log('query:', query, 'category:', category)
-      const response = await axios.get(
-        `/api/products?query=${query}&category=${category}`
-      )
+      let url = `/api/products?query=${query}&category=${category}`
+      if (subCategory) url += `&subCategory=${subCategory}`
+      
+      const response = await axios.get(url)
       console.log('API response:', response.data)
       return response.data
     },

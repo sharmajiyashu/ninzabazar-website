@@ -147,10 +147,11 @@ export async function fetchQueryProducts(query: string) {
   })
 }
 
-export async function fetchCategoryProducts(category: string) {
+export async function fetchCategoryProducts(category: string, subCategory?: string | null) {
   return await prisma.product.findMany({
     where: {
       category: category,
+      ...(subCategory && { subCategory: subCategory }),
       status: 'approved',
       isActive: true,
     },

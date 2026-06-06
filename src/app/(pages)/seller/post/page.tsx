@@ -38,6 +38,7 @@ const productSchema = z.object({
   shippingMethods: z.boolean().default(false),
   variantsOpen: z.boolean().default(false),
   MOQOpen: z.boolean().default(false),
+  subCategory: z.string().optional(),
 })
 
 type ProductFormValues = z.infer<typeof productSchema>
@@ -61,6 +62,7 @@ const Page = () => {
       variantsOpen: false,
       MOQOpen: false,
       shippingMethods: false,
+      subCategory: '',
     },
   })
 
@@ -244,18 +246,26 @@ const Page = () => {
   //   setMoqs((prev) => prev.filter((_, index) => index !== moqIndex))
   // }
 
-  const categories = [
-    { value: 'home-garden', label: 'Home & Garden' },
-    { value: 'electronics', label: 'Electronics' },
-    { value: 'fashion', label: 'Fashion' },
-    { value: 'accessories', label: 'Accessories' },
-    { value: 'sports-entertainment', label: 'Sports & Entertainment' },
-    { value: 'mother-kids', label: 'Mother & Kids' },
-    { value: 'beauty-health', label: 'Beauty & Health' },
-    { value: 'toys-games', label: 'Toys & Games' },
-    { value: 'automobiles', label: 'Automobiles' },
-    { value: 'arts-crafts', label: 'Arts & Crafts' },
-  ]
+  const [fetchedCategories, setFetchedCategories] = useState<any[]>([]);
+
+  React.useEffect(() => {
+    const fetchCats = async () => {
+      try {
+        const res = await fetch('/api/categories');
+        const data = await res.json();
+        if (Array.isArray(data)) {
+          setFetchedCategories(data);
+        }
+      } catch (err) {
+        console.error('Failed to fetch categories', err);
+      }
+    };
+    fetchCats();
+  }, []);
+
+  const selectedCategoryObj = React.useMemo(() => {
+    return fetchedCategories.find(c => c.name === watch('category'));
+  }, [fetchedCategories, watch('category')]);
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
@@ -305,6 +315,9 @@ const Page = () => {
       const formDataToSend = new FormData()
       formDataToSend.append('name', data.productName)
       formDataToSend.append('category', data.category)
+      if (data.subCategory) {
+        formDataToSend.append('subCategory', data.subCategory)
+      }
       formDataToSend.append('keywords', data.productKeywords.join(','))
       formDataToSend.append('description', data.description)
       formDataToSend.append('basePrice', data.basePrice.toString())
@@ -442,18 +455,19 @@ const Page = () => {
               <div className="flex-1">
                 <Select
                   value={watch('category')}
-                  onValueChange={(value) =>
+                  onValueChange={(value) => {
                     setValue('category', value, { shouldValidate: true })
-                  }
+                    setValue('subCategory', '') // reset subcategory on category change
+                  }}
                 >
                   <SelectTrigger className="w-full">
                     <SelectValue placeholder="Select a category" />
                   </SelectTrigger>
                   <SelectContent>
                     <SelectGroup>
-                      {categories.map((category, index) => (
-                        <SelectItem key={index} value={category.value}>
-                          {category.label}
+                      {fetchedCategories.map((category, index) => (
+                        <SelectItem key={index} value={category.name}>
+                          {category.name}
                         </SelectItem>
                       ))}
                     </SelectGroup>
@@ -466,6 +480,39 @@ const Page = () => {
                 )}
               </div>
             </div>
+
+            {/* SUBCATEGORY */}
+            {selectedCategoryObj && selectedCategoryObj.subCategories && selectedCategoryObj.subCategories.length > 0 && (
+              <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6 mt-4">
+                <div className="w-full md:w-36 flex-shrink-0">
+                  <h2>
+                    Subcategory
+                  </h2>
+                </div>
+                <div className="flex-1">
+                  <Select
+                    value={watch('subCategory')}
+                    onValueChange={(value) =>
+                      setValue('subCategory', value)
+                    }
+                  >
+                    <SelectTrigger className="w-full">
+                      <SelectValue placeholder="Select a subcategory (Optional)" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectGroup>
+                        <SelectItem value="none">None</SelectItem>
+                        {selectedCategoryObj.subCategories.map((sub: any, index: number) => (
+                          <SelectItem key={index} value={sub.name}>
+                            {sub.name}
+                          </SelectItem>
+                        ))}
+                      </SelectGroup>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            )}
 
             {/* PRODUCT KEYWORDS */}
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">

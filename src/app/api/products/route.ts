@@ -14,6 +14,7 @@ export async function GET(req: Request) {
     const query = searchParams.get('query') // for product list
     const id = searchParams.get('id')
     const category = searchParams.get('category')
+    const subCategory = searchParams.get('subCategory')
     const sellerId = searchParams.get('sellerId')
 
     if (q) {
@@ -32,7 +33,7 @@ export async function GET(req: Request) {
     }
 
     if (category) {
-      const ProductsByCategory = await fetchCategoryProducts(category)
+      const ProductsByCategory = await fetchCategoryProducts(category, subCategory)
       return NextResponse.json(ProductsByCategory)
     }
 

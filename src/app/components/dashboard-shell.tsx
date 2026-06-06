@@ -27,7 +27,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
   const displayRole = session?.user?.role || 'Seller'
 
   return (
-    <div className="seller-theme flex h-screen overflow-hidden bg-background">
+    <div className="seller-theme flex fixed inset-0 overflow-hidden bg-background">
       <aside
         className={`shrink-0 overflow-hidden transition-[width] duration-500 ease-out ${sidebarOpen ? 'w-64' : 'w-0'
           }`}
@@ -98,7 +98,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         >
           <div
             key={pathname}
-            className="mx-auto max-w-7xl animate-in fade-in duration-200"
+            className="mx-auto max-w-7xl w-full animate-in fade-in duration-200"
           >
             {children}
           </div>

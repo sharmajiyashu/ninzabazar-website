@@ -6,7 +6,7 @@ import { toast } from 'sonner'
 
 const Footer = () => {
   return (
-    <div className="flex flex-col mx-4 md:mx-12 lg:mx-20 xl:mx-40 border-t border-gray-150 pt-8 pb-10 font-sans">
+    <div className="flex flex-col w-full max-w-7xl mx-auto px-4 md:px-8 border-t border-gray-150 pt-8 pb-10 font-sans">
       <div className="flex flex-col lg:flex-row justify-between items-start gap-8 mb-10 w-full">
         {/* Left branding */}
         <div className="flex flex-col gap-2">
