@@ -286,12 +286,6 @@ const LoginForms = () => {
         </Link>
       </div>
 
-      <div className="text-center text-xs text-gray-500 border-t border-gray-100 pt-4">
-        Don&apos;t have an account?{' '}
-        <Link href="/seller/signup" className="text-[#006d44] font-bold hover:underline">
-          Signup here
-        </Link>
-      </div>
     </div>
   )
 }

@@ -68,7 +68,7 @@ const Page = () => {
                   Seller Login
                 </Link>
                 <span className="text-gray-300">|</span>
-                <Link href="/seller/registration" className="text-[#006d44] font-bold hover:underline">
+                <Link href="/seller/signup" className="text-[#006d44] font-bold hover:underline">
                   Register as Seller
                 </Link>
               </div>

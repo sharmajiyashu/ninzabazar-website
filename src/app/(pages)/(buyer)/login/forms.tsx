@@ -270,25 +270,6 @@ const LoginForms = () => {
         </Link>
       </div>
 
-      <div className="text-center text-xs text-gray-500 border-t border-gray-100 pt-4">
-        Don&apos;t have an account?{' '}
-        <Link href="/signup" className="text-[#006d44] font-bold hover:underline">
-          Signup here
-        </Link>
-      </div>
-
-      <div className="text-center text-xs text-gray-500 border-t border-gray-100 mt-4 pt-4">
-        <p className="mb-2">Are you a seller?</p>
-        <div className="flex items-center justify-center gap-3">
-          <Link href="/seller/login" className="text-[#006d44] font-bold hover:underline">
-            Seller Login
-          </Link>
-          <span className="text-gray-300">|</span>
-          <Link href="/seller/registration" className="text-[#006d44] font-bold hover:underline">
-            Register as Seller
-          </Link>
-        </div>
-      </div>
     </div>
   )
 }

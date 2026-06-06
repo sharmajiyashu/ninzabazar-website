@@ -103,7 +103,7 @@ const SignupForms = () => {
                 <FormItem className="flex-1">
                   <FormLabel className="text-sm font-medium text-gray-700 block mb-1">First Name</FormLabel>
                   <FormControl>
-                    <Input {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
+                    <Input placeholder="e.g. John" {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
                   </FormControl>
 
                   <FormMessage />
@@ -117,7 +117,7 @@ const SignupForms = () => {
                 <FormItem className="flex-1">
                   <FormLabel className="text-sm font-medium text-gray-700 block mb-1">Last Name</FormLabel>
                   <FormControl>
-                    <Input {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
+                    <Input placeholder="e.g. Doe" {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
                   </FormControl>
 
                   <FormMessage />
@@ -132,7 +132,7 @@ const SignupForms = () => {
               <FormItem>
                 <FormLabel className="text-sm font-medium text-gray-700 block mb-1">Email Address</FormLabel>
                 <FormControl>
-                  <Input {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
+                  <Input placeholder="e.g. john@example.com" {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -146,6 +146,7 @@ const SignupForms = () => {
                 <FormLabel className="text-sm font-medium text-gray-700 block mb-1">Contact Number</FormLabel>
                 <FormControl>
                   <Input
+                    placeholder="9876543210"
                     {...field}
                     value={field.value || ''}
                     onChange={(e) => {
@@ -170,6 +171,7 @@ const SignupForms = () => {
                   <div className="relative flex items-center">
                     <Input
                       type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••••••••••"
                       {...field}
                       className="border border-gray-200 rounded-lg pr-10 pl-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800"
                     />
@@ -200,6 +202,7 @@ const SignupForms = () => {
                   <div className="relative flex items-center">
                     <Input
                       type={showPassword ? 'text' : 'password'}
+                      placeholder="••••••••••••••••"
                       {...field}
                       className="border border-gray-200 rounded-lg pr-10 pl-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800"
                     />

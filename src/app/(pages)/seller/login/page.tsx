@@ -3,10 +3,11 @@ import React from 'react'
 import Image from 'next/image'
 import LoginForms from './forms'
 
+import Link from 'next/link'
+
 const Page = () => {
   return (
     <div className="relative flex min-h-screen w-full flex-col md:flex-row bg-[#006d44] overflow-hidden font-sans">
-
       <style dangerouslySetInnerHTML={{__html: `
         @keyframes float-animation {
           0%, 100% { transform: translateY(0px) rotate(0deg); }
@@ -51,6 +52,26 @@ const Page = () => {
             </div>
 
             <LoginForms />
+
+            <div className="text-center text-sm text-gray-500 mt-6">
+              Don&apos;t have an account?{' '}
+              <Link href={'/seller/signup'} className="font-bold text-[#006d44] hover:underline">
+                Sign up here
+              </Link>
+            </div>
+
+            <div className="text-center text-sm text-gray-500 mt-6 pt-4 border-t border-gray-100 w-full">
+              <p className="mb-2">Are you a buyer?</p>
+              <div className="flex items-center justify-center gap-3">
+                <Link href="/login" className="text-[#006d44] font-bold hover:underline">
+                  Buyer Login
+                </Link>
+                <span className="text-gray-300">|</span>
+                <Link href="/signup" className="text-[#006d44] font-bold hover:underline">
+                  Register as Buyer
+                </Link>
+              </div>
+            </div>
           </div>
         </div>
       </div>

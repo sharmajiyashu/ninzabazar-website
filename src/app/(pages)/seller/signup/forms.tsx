@@ -104,7 +104,7 @@ const SignupForms = () => {
               <FormItem>
                 <FormLabel className="text-sm font-medium text-gray-700 block mb-1">Company Name</FormLabel>
                 <FormControl>
-                  <Input {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
+                  <Input placeholder="e.g. Ninja Corp" {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
                 </FormControl>
 
                 <FormMessage />
@@ -119,7 +119,7 @@ const SignupForms = () => {
                 <FormItem className="flex-1">
                   <FormLabel className="text-sm font-medium text-gray-700 block mb-1">First Name</FormLabel>
                   <FormControl>
-                    <Input {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
+                    <Input placeholder="e.g. Jane" {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
                   </FormControl>
 
                   <FormMessage />
@@ -133,7 +133,7 @@ const SignupForms = () => {
                 <FormItem className="flex-1">
                   <FormLabel className="text-sm font-medium text-gray-700 block mb-1">Last Name</FormLabel>
                   <FormControl>
-                    <Input {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
+                    <Input placeholder="e.g. Smith" {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
                   </FormControl>
 
                   <FormMessage />
@@ -148,7 +148,7 @@ const SignupForms = () => {
               <FormItem>
                 <FormLabel className="text-sm font-medium text-gray-700 block mb-1">Email Address</FormLabel>
                 <FormControl>
-                  <Input {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
+                  <Input placeholder="e.g. jane@company.com" {...field} className="border border-gray-200 rounded-lg px-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -185,6 +185,7 @@ const SignupForms = () => {
                   <div className="relative flex items-center">
                     <Input
                       type={isPasswordVisible ? 'text' : 'password'}
+                      placeholder="••••••••••••••••"
                       {...field}
                       className="border border-gray-200 rounded-lg pr-10 pl-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800"
                     />
@@ -215,6 +216,7 @@ const SignupForms = () => {
                   <div className="relative flex items-center">
                     <Input
                       type={isConfirmPasswordVisible ? 'text' : 'password'}
+                      placeholder="••••••••••••••••"
                       {...field}
                       className="border border-gray-200 rounded-lg pr-10 pl-4 py-2.5 h-11 w-full focus-visible:ring-1 focus-visible:ring-[#006d44] focus-visible:border-[#006d44] text-sm text-gray-800"
                     />
