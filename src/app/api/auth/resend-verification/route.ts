@@ -4,7 +4,7 @@ import crypto from 'crypto'
 import nodemailer from 'nodemailer'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
-import { absoluteUrl } from '@/lib/app-url'
+import { requestPathUrl, verifyEmailApiPath } from '@/lib/routes'
 
 export async function POST(request: Request) {
     try {
@@ -51,8 +51,8 @@ export async function POST(request: Request) {
             },
         })
 
-        const verificationUrl = absoluteUrl(
-            `/api/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`,
+        const verificationUrl = requestPathUrl(
+            verifyEmailApiPath(verificationToken, email),
             request
         )
 

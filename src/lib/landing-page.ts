@@ -6,6 +6,7 @@ import {
   fetchLandingProductSlots,
   fetchLandingSections,
 } from '@/lib/landing-page-db';
+import { ROUTES } from '@/lib/routes';
 
 const productInclude = {
   images: { orderBy: { isDefault: 'desc' as const } },
@@ -17,20 +18,20 @@ const defaultHero = {
   headline: 'Buy & Sell Products\nAcross India',
   subtext: 'Connect with verified suppliers & distributors instantly.',
   ctaText: 'Buy Product',
-  ctaLink: '/products',
+  ctaLink: ROUTES.products,
   imageUrl: '/img/authentication/shopping_cart_3d.png',
   actionCards: [
-    { title: 'Request for Quotation', bgColor: '#fce3f2', image: '/img/hero-cards/quotation_3d.png', link: '/products' },
-    { title: 'Sell Your Products', bgColor: '#fdf0cd', image: '/img/hero-cards/sell_products_3d.png', link: '/seller/post' },
-    { title: 'Grow Your Business', bgColor: '#ffd3d5', image: '/img/hero-cards/grow_business_3d.png', link: '/seller/dashboard' },
+    { title: 'Request for Quotation', bgColor: '#fce3f2', image: '/img/hero-cards/quotation_3d.png', link: ROUTES.products },
+    { title: 'Sell Your Products', bgColor: '#fdf0cd', image: '/img/hero-cards/sell_products_3d.png', link: ROUTES.seller.post },
+    { title: 'Grow Your Business', bgColor: '#ffd3d5', image: '/img/hero-cards/grow_business_3d.png', link: ROUTES.seller.dashboard },
   ],
 };
 
 const defaultDeals = [
-  { id: '1', title: 'Small Appliances', description: 'Up to 40% off kitchen products', imageUrl: '/deals-mock.png', bgColor: '#0a8558', linkUrl: '/products', sortOrder: 1, isActive: true },
-  { id: '2', title: 'Premium Beauty', description: 'Flat 25% Off Hair Care', imageUrl: '/deals-mock2.png', bgColor: '#ff7a22', linkUrl: '/products', sortOrder: 2, isActive: true },
-  { id: '3', title: 'Indoor Furniture', description: 'Save up to 30% today', imageUrl: '/deals-mock3.png', bgColor: '#ffcd1f', linkUrl: '/products', sortOrder: 3, isActive: true },
-  { id: '4', title: 'Gadget & Device', description: 'Upto 15k off on Tablets', imageUrl: '/deals-mock4.png', bgColor: '#4c8cf5', linkUrl: '/products', sortOrder: 4, isActive: true },
+  { id: '1', title: 'Small Appliances', description: 'Up to 40% off kitchen products', imageUrl: '/deals-mock.png', bgColor: '#0a8558', linkUrl: ROUTES.products, sortOrder: 1, isActive: true },
+  { id: '2', title: 'Premium Beauty', description: 'Flat 25% Off Hair Care', imageUrl: '/deals-mock2.png', bgColor: '#ff7a22', linkUrl: ROUTES.products, sortOrder: 2, isActive: true },
+  { id: '3', title: 'Indoor Furniture', description: 'Save up to 30% today', imageUrl: '/deals-mock3.png', bgColor: '#ffcd1f', linkUrl: ROUTES.products, sortOrder: 3, isActive: true },
+  { id: '4', title: 'Gadget & Device', description: 'Upto 15k off on Tablets', imageUrl: '/deals-mock4.png', bgColor: '#4c8cf5', linkUrl: ROUTES.products, sortOrder: 4, isActive: true },
 ];
 
 function parseSectionConfig(config: unknown): Record<string, unknown> {

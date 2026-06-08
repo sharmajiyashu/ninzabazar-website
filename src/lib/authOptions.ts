@@ -3,9 +3,7 @@ import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import prisma from './prisma'
 import { comparePassword } from './hashPassword'
-import { initAuthUrl, useSecureAuthCookies } from './app-url'
-
-initAuthUrl()
+import { ROUTES } from './routes'
 
 interface CustomUser extends User {
   id: string
@@ -99,14 +97,15 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days validity for session
   },
-  useSecureCookies: useSecureAuthCookies(),
+  useSecureCookies: process.env.NODE_ENV === 'production',
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
-    signIn: '/login',
-    error: '/not-found',
+    signIn: ROUTES.auth.login,
+    error: ROUTES.notFound,
   },
   callbacks: {
     async redirect({ url, baseUrl }) {
+      // Pathname-only redirects — same behavior on every environment
       if (url.startsWith('/')) return `${baseUrl}${url}`
       if (url.startsWith(baseUrl)) return url
       return baseUrl

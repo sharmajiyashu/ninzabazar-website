@@ -19,6 +19,7 @@ import { useRouter } from 'next/navigation'
 import useCartStore from '../store/cart-store'
 import { CartItem, UserProps } from '../types/type'
 import { useQuery } from '@tanstack/react-query'
+import { ROUTES, productsPath } from '@/lib/routes'
 
 const NavBar = () => {
   const cart = useCartStore((state) => state.cart)
@@ -65,7 +66,7 @@ const NavBar = () => {
   }, [searchQuery])
 
   const handleSearch = (query: string) => {
-    router.push(`/products?query=${encodeURIComponent(query)}`)
+    router.push(productsPath({ query }))
     setShowDropdown(false)
   }
 
@@ -134,7 +135,7 @@ const NavBar = () => {
         {/* Mobile: logo + actions row */}
         <div className="flex items-center justify-between gap-3 py-3 md:hidden">
           <Link
-            href="/"
+            href={ROUTES.home}
             aria-label="Ninja Bazaar — go to homepage"
             className="min-w-0 shrink transition-opacity hover:opacity-90 active:scale-[0.98]"
           >
@@ -144,7 +145,7 @@ const NavBar = () => {
           </Link>
           <div className="flex shrink-0 items-center gap-2">
             <Link
-              href="/cart"
+              href={ROUTES.buyer.cart}
               className="relative flex items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:text-[#006d44]"
             >
               <ShoppingCart size={22} />
@@ -156,7 +157,7 @@ const NavBar = () => {
             </Link>
             {!session ? (
               <Link
-                href="/login"
+                href={ROUTES.auth.login}
                 className="flex h-10 items-center justify-center rounded-lg bg-[#006d44] px-3 text-sm font-bold text-white shadow-md transition-all hover:bg-[#005a36] active:scale-95"
               >
                 <User size={16} />
@@ -187,17 +188,17 @@ const NavBar = () => {
                     Welcome {session.user?.name}!
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <Link href="/account">
+                  <Link href={ROUTES.buyer.account}>
                     <DropdownMenuItem>Profile</DropdownMenuItem>
                   </Link>
-                  <Link href="/messages">
+                  <Link href={ROUTES.buyer.messages}>
                     <DropdownMenuItem>Messages</DropdownMenuItem>
                   </Link>
-                  <Link href="/orders">
+                  <Link href={ROUTES.buyer.orders}>
                     <DropdownMenuItem>Orders</DropdownMenuItem>
                   </Link>
                   <DropdownMenuItem
-                    onClick={() => signOut({ callbackUrl: '/' })}
+                    onClick={() => signOut({ callbackUrl: ROUTES.home })}
                     className="text-red-600"
                   >
                     Logout
@@ -237,7 +238,7 @@ const NavBar = () => {
         <div className="hidden h-[134px] items-center justify-between gap-6 md:flex">
           <div className="flex min-w-0 shrink-0 items-center gap-4">
             <Link
-              href="/"
+              href={ROUTES.home}
               aria-label="Ninja Bazaar — go to homepage"
               className="transition-opacity hover:opacity-90 active:scale-[0.98]"
             >
@@ -298,7 +299,7 @@ const NavBar = () => {
             </button>
 
             <Link
-              href="/cart"
+              href={ROUTES.buyer.cart}
               className="relative flex items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:text-[#006d44]"
             >
               <ShoppingCart size={22} />
@@ -311,7 +312,7 @@ const NavBar = () => {
 
             {!session ? (
               <Link
-                href="/login"
+                href={ROUTES.auth.login}
                 className="flex h-[50px] w-auto items-center justify-center gap-2 rounded-lg bg-[#006d44] px-5 text-sm font-bold tracking-wide text-white shadow-md shadow-green-900/10 transition-all hover:bg-[#005a36] active:scale-95 lg:w-[177px]"
               >
                 <User size={16} />
@@ -349,17 +350,17 @@ const NavBar = () => {
                     Welcome {session.user?.name}!
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  <Link href="/account">
+                  <Link href={ROUTES.buyer.account}>
                     <DropdownMenuItem className="cursor-pointer px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Profile
                     </DropdownMenuItem>
                   </Link>
-                  <Link href="/messages">
+                  <Link href={ROUTES.buyer.messages}>
                     <DropdownMenuItem className="cursor-pointer px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Messages
                     </DropdownMenuItem>
                   </Link>
-                  <Link href="/orders">
+                  <Link href={ROUTES.buyer.orders}>
                     <DropdownMenuItem className="cursor-pointer px-4 py-2 text-gray-600 hover:bg-gray-100">
                       Orders
                     </DropdownMenuItem>

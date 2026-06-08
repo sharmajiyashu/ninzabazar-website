@@ -18,6 +18,7 @@ import { signIn } from 'next-auth/react'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import { ROUTES } from '@/lib/routes'
 
 const formSchema = z.object({
   email: z.string().email({
@@ -33,7 +34,6 @@ const LoginForms = () => {
   const [showPassword, setShowPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
 
-  // Mobile Login States
   const [phoneNumber, setPhoneNumber] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [otpCode, setOtpCode] = useState('')
@@ -56,7 +56,7 @@ const LoginForms = () => {
       email: values.email,
       password: values.password,
       role: 'SELLER',
-      callbackUrl: '/seller/dashboard',
+      callbackUrl: ROUTES.seller.dashboard,
     })
 
     if (!response?.ok) {
@@ -68,7 +68,9 @@ const LoginForms = () => {
     }
 
     toast.success('Login successful!', { className: 'm-6' })
-    window.location.assign('/seller/dashboard')
+    router.push(ROUTES.seller.dashboard)
+    router.refresh()
+    setIsLoading(false)
   }
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -95,13 +97,12 @@ const LoginForms = () => {
     setTimeout(() => {
       setIsLoading(false)
       toast.success('Logged in successfully via OTP!')
-      router.push('/seller/dashboard')
+      router.push(ROUTES.seller.dashboard)
     }, 1500)
   }
 
   return (
     <div className="w-full flex flex-col">
-      {/* Custom Tabs Switcher: White bg, border, green text for inactive */}
       <div className="flex bg-white border border-gray-200 p-1.5 rounded-xl w-full mb-6">
         <button
           type="button"
@@ -255,7 +256,6 @@ const LoginForms = () => {
         </form>
       )}
 
-      {/* Form Footer Options */}
       <div className="flex items-center justify-between text-xs text-gray-500 mt-6 mb-4">
         <label className="flex items-center gap-2 cursor-pointer select-none">
           <input
@@ -265,7 +265,7 @@ const LoginForms = () => {
           />
           <span className="font-semibold text-gray-700">Keep me signed in</span>
         </label>
-        <Link href="/seller/login" className="text-[#006d44] font-semibold hover:underline">
+        <Link href={ROUTES.seller.login} className="text-[#006d44] font-semibold hover:underline">
           Forgot password?
         </Link>
       </div>

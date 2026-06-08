@@ -7,6 +7,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import { ROUTES } from '@/lib/routes'
 import { UserProps } from '@/app/types/type'
 import { formatPhoneNumber } from '@/lib/phoneNumFormatter'
 import CompanyDetails from './company-details'
@@ -36,7 +37,7 @@ const Dashboard = () => {
     if (!user) return
     const profile = user.sellerProfile
     if (!profile || profile.isVerified === false || profile.isVerified === null) {
-      router.replace('/seller/registration')
+      router.replace(ROUTES.seller.registration)
     }
   }, [user, router])
 

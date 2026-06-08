@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server'
 import { hashPassword } from '@/lib/hashPassword'
 import nodemailer from 'nodemailer'
 import prisma from '@/lib/prisma'
-import { absoluteUrl } from '@/lib/app-url'
+import { requestPathUrl, ROUTES } from '@/lib/routes'
 
 export async function POST(request: Request) {
     try {
@@ -67,7 +67,7 @@ export async function POST(request: Request) {
             },
         })
 
-        const registrationUrl = absoluteUrl('/seller/registration', request)
+        const registrationUrl = requestPathUrl(ROUTES.seller.registration, request)
 
         const mailOptions = {
             from: process.env.EMAIL_FROM,
@@ -395,8 +395,8 @@ export async function POST(request: Request) {
                           </p>
                           
                           <div class="footer-links">
-                              <a href="${process.env.FRONTEND_URL}/privacy" class="footer-link">Privacy Policy</a>
-                              <a href="${process.env.FRONTEND_URL}/terms" class="footer-link">Terms of Service</a>
+                              <a href="${requestPathUrl(ROUTES.legal.privacy, request)}" class="footer-link">Privacy Policy</a>
+                              <a href="${requestPathUrl(ROUTES.legal.terms, request)}" class="footer-link">Terms of Service</a>
                               <a href="mailto:support@ninjabazaar.com" class="footer-link">Support</a>
                           </div>
                       </div>

@@ -16,6 +16,7 @@ import {
 import React from 'react'
 import { twMerge } from 'tailwind-merge'
 import { signOut } from 'next-auth/react'
+import { ROUTES, matchesPath } from '@/lib/routes'
 
 export interface SidebarNavItem {
   title: string
@@ -39,11 +40,11 @@ export function isNavSection(
 }
 
 const sidebarNav: SidebarNavEntry[] = [
-  { title: 'Home', href: '/seller/dashboard', icon: IconLayoutDashboard },
-  { title: 'Products', href: '/seller/products', icon: IconShoppingCart },
-  { title: 'Orders', href: '/seller/sales', icon: IconTag },
-  { title: 'Payments', href: '/seller/payment', icon: IconCreditCard },
-  { title: 'Help', href: '/seller/help', icon: IconHelp },
+  { title: 'Home', href: ROUTES.seller.dashboard, icon: IconLayoutDashboard },
+  { title: 'Products', href: ROUTES.seller.products, icon: IconShoppingCart },
+  { title: 'Orders', href: ROUTES.seller.sales, icon: IconTag },
+  { title: 'Payments', href: ROUTES.seller.payment, icon: IconCreditCard },
+  { title: 'Help', href: ROUTES.about, icon: IconHelp },
 ]
 
 export function DashboardSidebar() {
@@ -61,7 +62,7 @@ export function DashboardSidebar() {
       {/* Brand Header */}
       <div className="flex h-16 shrink-0 items-center px-6">
         <Link
-          href="/"
+          href={ROUTES.home}
           aria-label="Ninja Bazaar — go to homepage"
           className="flex min-w-0 items-center gap-2.5 transition-transform hover:opacity-90 active:scale-[0.98]"
         >
@@ -85,9 +86,7 @@ export function DashboardSidebar() {
           const title = item.title
 
           if (!hasItems) {
-            const isActive =
-              pathname === href ||
-              (href === '/seller/dashboard' && pathname === '/seller/home')
+            const isActive = matchesPath(pathname, href)
             return (
               <Link
                 key={href}

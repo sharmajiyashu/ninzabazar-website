@@ -2,20 +2,20 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { redirect } from 'next/navigation'
+import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import AccountTabs from './components/account-tabs'
 import { UserProps } from '@/app/types/type'
+import { ROUTES } from '@/lib/routes'
 
 export default function BuyerAccountPage() {
   const { data: session, status } = useSession()
+  const router = useRouter()
   const [userData, setUserData] = useState<UserProps | null>(null)
   const [loading, setLoading] = useState(true)
 
   const fetchUserData = useCallback(async () => {
-    if (!session?.user?.id) {
-      return redirect('/login')
-    }
+    if (!session?.user?.id) return
 
     try {
       setLoading(true)
@@ -28,13 +28,17 @@ export default function BuyerAccountPage() {
     } finally {
       setLoading(false)
     }
-  }, [session])
+  }, [session?.user?.id])
 
   useEffect(() => {
-    if (status !== 'loading') {
+    if (status === 'unauthenticated') {
+      router.replace(ROUTES.auth.login)
+      return
+    }
+    if (status === 'authenticated') {
       fetchUserData()
     }
-  }, [status, fetchUserData])
+  }, [status, fetchUserData, router])
 
   if (status === 'loading' || loading) {
     return (
@@ -45,27 +49,25 @@ export default function BuyerAccountPage() {
   }
 
   if (!session || !userData) {
-    redirect('/account')
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        Unable to load account. Please try again.
+      </div>
+    )
   }
 
   const formattedData = {
     name: `${userData.firstName} ${userData.lastName}`,
     email: userData.email,
     phoneNumber: userData.contactNumber,
-    dateOfBirth: userData.dateOfBirth,
+    dateOfBirth: userData.dateOfBirth ?? '',
     addresses:
       userData.buyerProfile?.shippingAddresses?.map((address) => ({
         id: address.id,
         address: `${address.street}, ${address.city}, ${address.state} ${address.postalCode}, ${address.country}`,
         label: address.isDefault ? 'Home' : 'Other',
-        isDefault: address.isDefault,
-      })) || [],
-    refreshData: fetchUserData,
+      })) ?? [],
   }
 
-  return (
-    <div className="page-container animate-fade-up">
-      <AccountTabs {...formattedData} />
-    </div>
-  )
+  return <AccountTabs {...formattedData} />
 }

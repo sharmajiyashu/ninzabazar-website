@@ -3,7 +3,11 @@ import { hashPassword } from '@/lib/hashPassword'
 import nodemailer from 'nodemailer'
 import prisma from '@/lib/prisma'
 import crypto from 'crypto'
-import { absoluteUrl } from '@/lib/app-url'
+import {
+  requestPathUrl,
+  verifyEmailApiPath,
+  ROUTES,
+} from '@/lib/routes'
 
 export async function POST(request: Request) {
   try {
@@ -67,8 +71,8 @@ export async function POST(request: Request) {
       },
     })
 
-    const verificationUrl = absoluteUrl(
-      `/api/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`,
+    const verificationUrl = requestPathUrl(
+      verifyEmailApiPath(verificationToken, email),
       request
     )
 
@@ -445,8 +449,8 @@ export async function POST(request: Request) {
                             </p>
                             
                             <div class="footer-links">
-                                <a href="${absoluteUrl('/privacy', request)}" class="footer-link">Privacy Policy</a>
-                                <a href="${absoluteUrl('/terms', request)}" class="footer-link">Terms of Service</a>
+                                <a href="${requestPathUrl(ROUTES.legal.privacy, request)}" class="footer-link">Privacy Policy</a>
+                                <a href="${requestPathUrl(ROUTES.legal.terms, request)}" class="footer-link">Terms of Service</a>
                                 <a href="mailto:support@ninjabazaar.com" class="footer-link">Support</a>
                             </div>
                         </div>

@@ -1,7 +1,21 @@
 import type { NextConfig } from 'next'
+import { ROUTES } from './src/lib/routes/paths'
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  async redirects() {
+    return [
+      {
+        source: ROUTES.seller.home,
+        destination: ROUTES.seller.dashboard,
+        permanent: true,
+      },
+      {
+        source: '/seller/orders',
+        destination: ROUTES.seller.sales,
+        permanent: true,
+      },
+    ]
+  },
   images: {
     remotePatterns: [
       {

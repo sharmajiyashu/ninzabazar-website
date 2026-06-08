@@ -1,34 +1,19 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
-import { initAuthUrl, redirectTo, syncAuthUrl } from '@/lib/app-url'
-
-initAuthUrl()
-
-/** Paths anyone can visit without logging in */
-const PUBLIC_PATHS = [
-  '/',
-  '/products',
-  '/about',
-  '/landing-page',
-  '/login',
-  '/signup',
-  '/cart',
-  '/careers',
-]
-
-function isPublicPath(pathname: string): boolean {
-  if (PUBLIC_PATHS.includes(pathname)) return true
-  if (pathname.startsWith('/product/')) return true
-  if (pathname.startsWith('/store/')) return true
-  return false
-}
+import {
+  ROUTES,
+  SELLER_PENDING_ALLOWED,
+  isPublicPath,
+  isEmailVerifyPath,
+  isSellerProtectedRoute,
+  isBuyerProtectedRoute,
+  matchesPath,
+  redirectPath,
+} from '@/lib/routes'
 
 export async function middleware(req: NextRequest) {
-  syncAuthUrl(req)
-
   const pathname = req.nextUrl.pathname
-  const url = req.nextUrl.clone()
 
   if (
     pathname.startsWith('/api/socket/io') &&
@@ -42,113 +27,92 @@ export async function middleware(req: NextRequest) {
     secret: process.env.NEXTAUTH_SECRET,
   })
 
-  const homepage = '/'
-  const userSignInPath = '/login'
-  const buyerMessages = '/messages'
-  const sellerPath = '/seller'
-  const sellerSignInPath = '/seller/login'
-  const sellerSignupPath = '/seller/signup'
-  const sellerProfilePath = /^\/seller-profile\/[^\/]+$/
-  const emailVerifyPath = '/verify-email'
-
-  const publicSellerPaths = [
-    sellerSignInPath,
-    sellerSignupPath,
-    sellerProfilePath,
-  ]
-
-  const isPublicSellerPath = publicSellerPaths.some((path) =>
-    typeof path === 'string' ? path === pathname : path.test(pathname)
-  )
-
-  const isVerifyEmailPage =
-    pathname === '/verify-email' ||
-    pathname === '/verification-success' ||
-    pathname === '/verification-failed'
-
-  if (pathname === userSignInPath && token) {
+  // ── Buyer login: redirect authenticated users ──────────────────────────────
+  if (matchesPath(pathname, ROUTES.auth.login) && token) {
     if (token.role === 'SELLER') {
-      return NextResponse.redirect(redirectTo('/seller/dashboard', req))
+      return NextResponse.redirect(redirectPath(ROUTES.seller.dashboard, req))
     }
-    url.pathname = homepage
-    return NextResponse.redirect(url)
+    return NextResponse.redirect(redirectPath(ROUTES.home, req))
   }
 
-  if (pathname === buyerMessages && !token) {
-    url.pathname = userSignInPath
-    return NextResponse.redirect(url)
+  // ── Buyer protected routes ───────────────────────────────────────────────────
+  if (isBuyerProtectedRoute(pathname) && !token) {
+    return NextResponse.redirect(redirectPath(ROUTES.auth.login, req))
   }
 
-  if (token?.role === 'SELLER' && pathname === sellerSignInPath) {
-    return NextResponse.redirect(redirectTo('/seller/dashboard', req))
+  // ── Seller login: redirect authenticated sellers ───────────────────────────
+  if (token?.role === 'SELLER' && matchesPath(pathname, ROUTES.seller.login)) {
+    return NextResponse.redirect(redirectPath(ROUTES.seller.dashboard, req))
   }
 
-  // Logged-in sellers should land on seller dashboard, not the buyer homepage
+  // ── Seller on buyer home → seller dashboard (skip if pending approval) ─────
   if (
     token?.role === 'SELLER' &&
-    pathname === homepage &&
-    token?.storeStatus !== 'pending'
+    matchesPath(pathname, ROUTES.home) &&
+    token.storeStatus !== 'pending'
   ) {
-    return NextResponse.redirect(redirectTo('/seller/dashboard', req))
+    return NextResponse.redirect(redirectPath(ROUTES.seller.dashboard, req))
   }
 
-  // Buyers can browse public pages before email verification
+  // ── Buyer email verification ─────────────────────────────────────────────────
   if (token?.role === 'BUYER') {
     const isVerified = token.emailVerified === true
 
-    if (!isVerified && !isVerifyEmailPage && !isPublicPath(pathname)) {
+    if (!isVerified && !isEmailVerifyPath(pathname) && !isPublicPath(pathname)) {
       return NextResponse.redirect(
-        new URL(`${emailVerifyPath}?refresh=true`, req.url)
+        redirectPath(`${ROUTES.auth.verifyEmail}?refresh=true`, req)
       )
     }
 
-    if (isVerified && pathname === '/verify-email') {
-      return NextResponse.redirect(new URL('/', req.url))
+    if (isVerified && matchesPath(pathname, ROUTES.auth.verifyEmail)) {
+      return NextResponse.redirect(redirectPath(ROUTES.home, req))
     }
   }
 
   if (
-    pathname === emailVerifyPath &&
+    matchesPath(pathname, ROUTES.auth.verifyEmail) &&
     token?.role === 'BUYER' &&
-    token?.emailVerified === true
+    token.emailVerified === true
   ) {
-    return NextResponse.redirect(new URL('/', req.url))
+    return NextResponse.redirect(redirectPath(ROUTES.home, req))
   }
 
-  if (pathname.startsWith(sellerPath) && !isPublicSellerPath) {
+  // ── Seller protected routes ──────────────────────────────────────────────────
+  if (isSellerProtectedRoute(pathname)) {
     if (!token) {
-      return NextResponse.redirect(redirectTo(sellerSignInPath, req))
+      return NextResponse.redirect(redirectPath(ROUTES.seller.login, req))
     }
     if (token.role !== 'SELLER') {
-      return NextResponse.redirect(redirectTo(userSignInPath, req))
+      return NextResponse.redirect(redirectPath(ROUTES.auth.login, req))
     }
   }
 
-  const sellerPathsWhenPending = [
-    '/seller/pending',
-    '/seller/registration',
-    homepage,
-  ]
-
+  // ── Pending seller: restrict to allowed paths ────────────────────────────────
   if (
     token?.role === 'SELLER' &&
-    token?.storeStatus === 'pending' &&
-    !sellerPathsWhenPending.includes(pathname)
+    token.storeStatus === 'pending' &&
+    !SELLER_PENDING_ALLOWED.some((allowed) => matchesPath(pathname, allowed))
   ) {
-    return NextResponse.redirect(redirectTo('/seller/pending', req))
+    return NextResponse.redirect(redirectPath(ROUTES.seller.pending, req))
   }
 
   return NextResponse.next()
 }
 
 export const config = {
+  // Must be a static literal — Next.js does not support imported matcher arrays
   matcher: [
     '/',
     '/login',
-    '/messages',
+    '/signup',
     '/verify-email',
     '/verification-success',
     '/verification-failed',
+    '/account',
+    '/cart',
+    '/checkout',
+    '/orders',
+    '/messages',
     '/seller/:path*',
   ],
 }

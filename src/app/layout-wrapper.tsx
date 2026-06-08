@@ -1,5 +1,6 @@
 'use client'
 
+import { useMemo } from 'react'
 import { usePathname } from 'next/navigation'
 import NavBar from './components/nav-bar'
 import Footer from './components/footer'
@@ -7,33 +8,35 @@ import { DashboardShell } from './components/dashboard-shell'
 import { useSession } from 'next-auth/react'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
+import { ROUTES, isAuthRoute, isSellerRoute } from '@/lib/routes'
 
-const AUTH_ROUTES = ['/login', '/signup', '/seller/login', '/seller/signup']
+type LayoutShell = 'auth' | 'seller' | 'public'
 
-function isSellerRoute(pathname: string) {
-  return pathname.startsWith('/seller') && !AUTH_ROUTES.includes(pathname)
+function resolveShell(pathname: string, role?: string): LayoutShell {
+  if (isAuthRoute(pathname)) return 'auth'
+  if (isSellerRoute(pathname)) return 'seller'
+  if (role === 'SELLER' && pathname !== ROUTES.home) return 'seller'
+  return 'public'
 }
 
 const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
   const { data: session } = useSession()
   const pathname = usePathname()
 
+  const shell = useMemo(
+    () => resolveShell(pathname, session?.user?.role),
+    [pathname, session?.user?.role]
+  )
+
   const withDates = (content: React.ReactNode) => (
     <LocalizationProvider dateAdapter={AdapterDayjs}>{content}</LocalizationProvider>
   )
 
-  if (AUTH_ROUTES.includes(pathname)) {
+  if (shell === 'auth') {
     return withDates(children)
   }
 
-  if (isSellerRoute(pathname)) {
-    return withDates(<DashboardShell>{children}</DashboardShell>)
-  }
-
-  const userRole = session?.user?.role
-  const isPublicHome = pathname === '/'
-
-  if (userRole === 'SELLER' && !isPublicHome) {
+  if (shell === 'seller') {
     return withDates(<DashboardShell>{children}</DashboardShell>)
   }
 
