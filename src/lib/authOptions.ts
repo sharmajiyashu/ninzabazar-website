@@ -106,6 +106,11 @@ export const authOptions: NextAuthOptions = {
     error: '/not-found',
   },
   callbacks: {
+    async redirect({ url, baseUrl }) {
+      if (url.startsWith('/')) return `${baseUrl}${url}`
+      if (url.startsWith(baseUrl)) return url
+      return baseUrl
+    },
     async signIn({ user, account, profile }) {
       if (account?.provider === 'google') {
         try {

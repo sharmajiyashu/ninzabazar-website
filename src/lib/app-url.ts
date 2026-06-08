@@ -41,23 +41,34 @@ export function localOrigin(): string {
 
 /**
  * NextAuth requires NEXTAUTH_URL internally for cookies/callbacks.
- * Auto-set from localhost (with port) or Vercel — no manual .env needed.
+ * Prefer the production Vercel hostname, then deployment URL, then localhost.
  */
 export function initAuthUrl(): void {
   if (process.env.NEXTAUTH_URL) return
 
-  if (process.env.VERCEL_URL) {
-    process.env.NEXTAUTH_URL = `https://${process.env.VERCEL_URL}`
+  const vercelHost =
+    process.env.VERCEL_PROJECT_PRODUCTION_URL ||
+    process.env.VERCEL_URL
+
+  if (vercelHost) {
+    const host = vercelHost.replace(/^https?:\/\//, '').replace(/\/$/, '')
+    process.env.NEXTAUTH_URL = `https://${host}`
     return
   }
 
   process.env.NEXTAUTH_URL = localOrigin()
 }
 
-export function useSecureAuthCookies(req?: Request | NextRequest): boolean {
+/** Set NEXTAUTH_URL from the incoming request (required on Vercel for correct redirects). */
+export function syncAuthUrl(req: Request | NextRequest): string {
+  const origin = requestOrigin(req)
+  process.env.NEXTAUTH_URL = origin
+  return origin
+}
+
+export function useSecureAuthCookies(): boolean {
   initAuthUrl()
-  if (req) {
-    return requestOrigin(req).startsWith('https://')
-  }
+  // Vercel is always HTTPS; local dev uses plain cookies on http://localhost
+  if (process.env.VERCEL) return true
   return process.env.NEXTAUTH_URL?.startsWith('https://') ?? false
 }

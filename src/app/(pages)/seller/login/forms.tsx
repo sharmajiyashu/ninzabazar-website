@@ -68,7 +68,7 @@ const LoginForms = () => {
     }
 
     toast.success('Login successful!', { className: 'm-6' })
-    window.location.href = response.url ?? '/seller/dashboard'
+    window.location.assign('/seller/dashboard')
   }
 
   const handleSendOtp = async (e: React.FormEvent) => {

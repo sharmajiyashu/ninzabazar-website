@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 import { getToken } from 'next-auth/jwt'
-import { initAuthUrl, redirectTo, requestOrigin } from '@/lib/app-url'
+import { initAuthUrl, redirectTo, syncAuthUrl } from '@/lib/app-url'
 
 initAuthUrl()
 
@@ -25,8 +25,7 @@ function isPublicPath(pathname: string): boolean {
 }
 
 export async function middleware(req: NextRequest) {
-  // Keep NextAuth URL aligned with the current host (localhost:port or live domain)
-  process.env.NEXTAUTH_URL = requestOrigin(req)
+  syncAuthUrl(req)
 
   const pathname = req.nextUrl.pathname
   const url = req.nextUrl.clone()
@@ -68,6 +67,9 @@ export async function middleware(req: NextRequest) {
     pathname === '/verification-failed'
 
   if (pathname === userSignInPath && token) {
+    if (token.role === 'SELLER') {
+      return NextResponse.redirect(redirectTo('/seller/dashboard', req))
+    }
     url.pathname = homepage
     return NextResponse.redirect(url)
   }
@@ -78,6 +80,15 @@ export async function middleware(req: NextRequest) {
   }
 
   if (token?.role === 'SELLER' && pathname === sellerSignInPath) {
+    return NextResponse.redirect(redirectTo('/seller/dashboard', req))
+  }
+
+  // Logged-in sellers should land on seller dashboard, not the buyer homepage
+  if (
+    token?.role === 'SELLER' &&
+    pathname === homepage &&
+    token?.storeStatus !== 'pending'
+  ) {
     return NextResponse.redirect(redirectTo('/seller/dashboard', req))
   }
 
