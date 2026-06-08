@@ -15,10 +15,17 @@ export async function GET(request: NextRequest) {
           include: {
             images: true,
             seller: true,
-            shippingMethods: {
-              where: {
-                isActive: true,
+            variants: {
+              select: {
+                id: true,
+                title: true,
+                option: true,
+                price: true,
+                hasPrice: true,
               },
+            },
+            shippingMethods: {
+              where: { isActive: true },
             },
           },
         },

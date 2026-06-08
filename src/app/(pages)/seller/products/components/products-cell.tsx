@@ -1,5 +1,6 @@
 'use client'
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -10,7 +11,12 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog'
 import { ProductDataProps } from '@/app/types/type'
-import { EditProductModal } from './edit-product-modal'
+import {
+  getListingLabel,
+  getReviewStatusLabel,
+  isProductApproved,
+  resolveReviewStatus,
+} from '@/lib/product-status'
 import { useQueryClient } from '@tanstack/react-query'
 import Image from 'next/image'
 import CurrencyFormatter from '@/app/components/ui-utils/currency-format'
@@ -63,16 +69,40 @@ export const ProductCell = ({ product }: { product: ProductDataProps }) => {
         <p className="text-xs text-muted-foreground">
           Stock: {product.quantity}
         </p>
-        <p className="text-sm text-orange-500 font-medium">
-          <CurrencyFormatter amount={product.basePrice} />
+        <p className="text-sm font-medium">
+          {product.isSale && product.salePrice ? (
+            <span className="flex items-center gap-2">
+              <span className="text-orange-500">
+                <CurrencyFormatter amount={Number(product.salePrice)} />
+              </span>
+              <span className="text-muted-foreground line-through text-xs">
+                <CurrencyFormatter amount={Number(product.basePrice)} />
+              </span>
+            </span>
+          ) : (
+            <span className="text-orange-500">
+              <CurrencyFormatter amount={Number(product.basePrice)} />
+            </span>
+          )}
         </p>
       </div>
     </div>
   )
 }
 
-export const CategoryCell = ({ category }: { category: string }) => (
-  <span className="text-sm text-muted-foreground">{category}</span>
+export const CategoryCell = ({
+  category,
+  subCategory,
+}: {
+  category?: { id: string; name: string } | null
+  subCategory?: { id: string; name: string } | null
+}) => (
+  <div className="text-sm text-muted-foreground">
+    <p>{category?.name || 'N/A'}</p>
+    {subCategory?.name && (
+      <p className="text-xs text-gray-400">{subCategory.name}</p>
+    )}
+  </div>
 )
 
 export const LastUpdatedCell = ({ product }: { product: ProductDataProps }) => (
@@ -84,35 +114,129 @@ export const LastUpdatedCell = ({ product }: { product: ProductDataProps }) => (
 )
 
 export const StatusCell = ({ product }: { product: ProductDataProps }) => {
-  const color =
-    product.status === 'approved'
-      ? 'text-green-600'
-      : product.status === 'rejected'
-        ? 'text-red-500'
-        : product.status === 'pending'
-          ? 'text-yellow-500'
-          : 'text-orange-500'
-
-  return (
-    <span className={`px-2 py-1 rounded-full ${color} text-sm`}>
-      {product.status.toUpperCase()}
-    </span>
+  const reviewStatus = resolveReviewStatus(
+    product.status,
+    product.adminApproved
   )
-}
 
-export const ActiveCell = ({ product }: { product: ProductDataProps }) => {
+  const config: Record<string, { label: string; className: string }> = {
+    approved: {
+      label: getReviewStatusLabel('approved'),
+      className: 'bg-green-50 text-green-700 border border-green-200',
+    },
+    pending: {
+      label: getReviewStatusLabel('pending'),
+      className: 'bg-amber-50 text-amber-700 border border-amber-200',
+    },
+    rejected: {
+      label: getReviewStatusLabel('rejected'),
+      className: 'bg-red-50 text-red-700 border border-red-200',
+    },
+  }
+
+  const status = config[reviewStatus] ?? {
+    label: product.status,
+    className: 'bg-gray-50 text-gray-600 border border-gray-200',
+  }
+
   return (
     <span
-      className={`text-xs font-medium px-2 py-1 rounded-full ${
-        product.isActive
-          ? 'bg-green-100 text-green-700'
-          : 'bg-gray-100 text-gray-600'
-      }`}
+      className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium ${status.className}`}
     >
-      {product.isActive ? 'Active' : 'Inactive'}
+      {status.label}
     </span>
   )
 }
+
+export const VisibilityCell = ({
+  product,
+  onRefetch,
+}: {
+  product: ProductDataProps
+  onRefetch?: () => void
+}) => {
+  const [isToggling, setIsToggling] = useState(false)
+  const queryClient = useQueryClient()
+  const reviewStatus = resolveReviewStatus(
+    product.status,
+    product.adminApproved
+  )
+  const approved = isProductApproved(product.status, product.adminApproved)
+  const isLive = Boolean(product.isActive)
+  const listingLabel = getListingLabel(reviewStatus, isLive)
+
+  const handleToggle = async () => {
+    if (!approved) {
+      toast.error(
+        reviewStatus === 'rejected'
+          ? 'This product was rejected and cannot be listed.'
+          : 'Product must be approved by admin before you can publish it.'
+      )
+      return
+    }
+
+    try {
+      setIsToggling(true)
+      await axios.put('/api/seller-products/update-visibility', {
+        id: product.id,
+        isActive: !isLive,
+      })
+      await queryClient.refetchQueries({ queryKey: ['productSeller'] })
+      onRefetch?.()
+      toast.success(
+        isLive
+          ? 'Product hidden from your store'
+          : 'Product is now live on your store'
+      )
+    } catch (error) {
+      const message =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : 'Failed to update listing'
+      toast.error(message)
+    } finally {
+      setIsToggling(false)
+    }
+  }
+
+  if (!approved) {
+    return (
+      <span
+        title={
+          reviewStatus === 'rejected'
+            ? 'Admin rejected this product'
+            : 'Waiting for admin to review your product'
+        }
+        className="inline-flex px-2.5 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-500 border border-gray-200"
+      >
+        {listingLabel}
+      </span>
+    )
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={handleToggle}
+      disabled={isToggling}
+      title={
+        isLive
+          ? 'Click to hide from your store'
+          : 'Click to publish to your store'
+      }
+      className={`inline-flex px-2.5 py-1 rounded-full text-xs font-medium transition-colors ${
+        isLive
+          ? 'bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100'
+          : 'bg-slate-50 text-slate-600 border border-slate-200 hover:bg-slate-100'
+      } ${isToggling ? 'opacity-60 cursor-wait' : 'cursor-pointer'}`}
+    >
+      {isToggling ? 'Updating...' : listingLabel}
+    </button>
+  )
+}
+
+/** @deprecated use VisibilityCell */
+export const ActiveCell = VisibilityCell
 
 export const ActionsCell = ({
   product,
@@ -121,12 +245,18 @@ export const ActionsCell = ({
   product: ProductDataProps
   onDeleted?: () => void
 }) => {
+  const router = useRouter()
   const [openDelete, setOpenDelete] = useState(false)
-  const [openEdit, setOpenEdit] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTogglingActive, setIsTogglingActive] = useState(false)
 
   const queryClient = useQueryClient()
+  const reviewStatus = resolveReviewStatus(
+    product.status,
+    product.adminApproved
+  )
+  const approved = isProductApproved(product.status, product.adminApproved)
+  const isLive = Boolean(product.isActive)
 
   const handleDelete = async () => {
     try {
@@ -144,8 +274,12 @@ export const ActionsCell = ({
     }
   }
   const handleToggleActive = async () => {
-    if (product.status !== 'approved' && !product.isActive) {
-      toast.error('Only approved products can be activated.')
+    if (!approved) {
+      toast.error(
+        reviewStatus === 'rejected'
+          ? 'This product was rejected and cannot be listed.'
+          : 'Product must be approved by admin before you can publish it.'
+      )
       return
     }
 
@@ -153,15 +287,20 @@ export const ActionsCell = ({
       setIsTogglingActive(true)
       await axios.put(`/api/seller-products/update-visibility`, {
         id: product.id,
-        isActive: !product.isActive,
+        isActive: !isLive,
       })
-      queryClient.invalidateQueries({ queryKey: ['productSeller'] })
+      await queryClient.refetchQueries({ queryKey: ['productSeller'] })
       toast.success(
-        `Product ${product.isActive ? 'deactivated' : 'activated'} successfully`
+        isLive
+          ? 'Product hidden from your store'
+          : 'Product is now live on your store'
       )
     } catch (error) {
-      console.error('Toggle isActive failed:', error)
-      toast.error('Failed to update product visibility')
+      const message =
+        axios.isAxiosError(error) && error.response?.data?.error
+          ? error.response.data.error
+          : 'Failed to update listing'
+      toast.error(message)
     } finally {
       setIsTogglingActive(false)
     }
@@ -189,7 +328,7 @@ export const ActionsCell = ({
           >
             {/* Edit Action */}
             <DropdownMenuItem
-              onClick={() => setOpenEdit(true)}
+              onClick={() => router.push(`/seller/post?edit=${product.id}`)}
               className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-50 group"
             >
               <Edit3 className="h-4 w-4 text-blue-500 group-hover:text-blue-600" />
@@ -201,15 +340,12 @@ export const ActionsCell = ({
             {/* Toggle Visibility Action */}
             <DropdownMenuItem
               onClick={handleToggleActive}
-              disabled={
-                isTogglingActive ||
-                (!product.isActive && product.status !== 'approved')
-              }
+              disabled={isTogglingActive || !approved}
               className="flex items-center gap-2 cursor-pointer hover:bg-amber-50 focus:bg-amber-50 group disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {isTogglingActive ? (
                 <Loader2 className="h-4 w-4 animate-spin text-amber-500" />
-              ) : product.isActive ? (
+              ) : isLive ? (
                 <EyeOff className="h-4 w-4 text-amber-500 group-hover:text-amber-600" />
               ) : (
                 <Eye className="h-4 w-4 text-amber-500 group-hover:text-amber-600" />
@@ -217,9 +353,13 @@ export const ActionsCell = ({
               <span className="text-gray-700 group-hover:text-amber-600">
                 {isTogglingActive
                   ? 'Updating...'
-                  : product.isActive
-                    ? 'Deactivate'
-                    : 'Activate'}
+                  : !approved
+                    ? reviewStatus === 'rejected'
+                      ? 'Listing unavailable'
+                      : 'Awaiting approval'
+                    : isLive
+                      ? 'Hide from Store'
+                      : 'Publish to Store'}
               </span>
             </DropdownMenuItem>
 
@@ -298,17 +438,6 @@ export const ActionsCell = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Edit Modal */}
-      <EditProductModal
-        product={product}
-        open={openEdit}
-        onClose={() => setOpenEdit(false)}
-        onUpdated={() => {
-          queryClient.invalidateQueries({ queryKey: ['productSeller'] })
-          setOpenEdit(false)
-        }}
-      />
     </>
   )
 }

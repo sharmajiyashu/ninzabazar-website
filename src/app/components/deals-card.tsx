@@ -9,9 +9,11 @@ const DealsCard: React.FC<DealsCardProps> = ({
   altImage,
   bgColor,
 }) => {
+  const isHex = bgColor.startsWith('#')
   return (
     <div
-      className={`w-full max-w-[270px] aspect-[3/4] flex flex-col p-7 gap-y-6 rounded-2xl shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer select-none ${bgColor}`}
+      className={`w-full max-w-[270px] aspect-[3/4] flex flex-col p-7 gap-y-6 rounded-2xl shadow-md transition-all duration-300 hover:shadow-lg hover:-translate-y-1 cursor-pointer select-none ${isHex ? '' : bgColor}`}
+      style={isHex ? { backgroundColor: bgColor } : undefined}
     >
       <div className="flex-1 min-h-0">
         <h3 className="text-white font-extrabold text-2xl mb-1">{title}</h3>

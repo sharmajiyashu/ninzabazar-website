@@ -26,7 +26,7 @@ const NavBar = () => {
   const [desktopMenuOpen, setDesktopMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
-  const [searchResults, setSearchResults] = useState<[]>([])
+  const [searchResults, setSearchResults] = useState<string[]>([])
   const dropdownRef = useRef<HTMLDivElement | null>(null)
 
   const { data: session } = useSession()
@@ -38,6 +38,7 @@ const NavBar = () => {
       const res = await axios.get(`/api/getUser?id=${session?.user.id}`)
       return res.data
     },
+    enabled: !!session?.user?.id,
   })
 
   const performSearch = async () => {
@@ -46,14 +47,13 @@ const NavBar = () => {
       const searchProduct = await axios.get(`/api/products?q=${searchQuery}`)
       setSearchResults(searchProduct.data)
       setShowDropdown(true)
-      console.log(searchProduct.data)
       return searchProduct.data
     } catch (error) {
       console.log(error)
       throw new Error('Failed to search products')
     }
   }
-  // debounce 3s
+
   useEffect(() => {
     const timeout = setTimeout(() => {
       if (searchQuery.trim()) {
@@ -74,6 +74,7 @@ const NavBar = () => {
       handleSearch(searchQuery)
     }
   }
+
   const totalItems = cart.reduce(
     (sum: number, item: CartItem) => sum + item.quantity,
     0
@@ -106,182 +107,276 @@ const NavBar = () => {
     }
   }, [showDropdown])
 
-  return (
-    <header className="bg-white border-b border-[#DDDDDD] shadow-[0px_4px_4px_rgba(0,0,0,0.05)] w-full select-none transition-all duration-300">
-      <div 
-        className="max-w-7xl mx-auto px-4 md:px-8 flex items-center justify-between w-full h-[134px]"
-        style={{ boxSizing: 'border-box' }}
-      >
-      {/* Name / Logo group (Group 1171277265) */}
-      <div className="flex items-center gap-4">
-        <Link href={'/'}>
-          <h1
-            className="text-[#006d44] select-none cursor-pointer"
-            style={{
-              fontFamily: "'Inter', sans-serif",
-              fontWeight: 700,
-              fontSize: '40px',
-              lineHeight: '36px',
-              letterSpacing: '0em'
-            }}
+  const searchDropdown = showDropdown && (
+    <div
+      ref={dropdownRef}
+      className="absolute left-0 right-0 top-full z-50 mt-2 overflow-hidden rounded-md border border-green bg-white shadow-lg"
+    >
+      {searchResults.length > 0 ? (
+        searchResults.map((keywords, index) => (
+          <div
+            key={index}
+            className="cursor-pointer px-4 py-2 transition-colors hover:bg-green hover:text-white"
+            onClick={() => handleSearch(keywords)}
           >
-            Ninja Bazaar
-          </h1>
-        </Link>
+            <p className="text-green hover:text-white">{keywords}</p>
+          </div>
+        ))
+      ) : searchQuery.length > 0 ? (
+        <h1 className="p-4 text-green">{`${searchQuery} not found`}</h1>
+      ) : null}
+    </div>
+  )
 
+  return (
+    <header className="sticky top-0 z-40 w-full select-none border-b border-[#DDDDDD] bg-white shadow-[0px_4px_4px_rgba(0,0,0,0.05)] transition-all duration-300">
+      <div className="mx-auto w-full max-w-[1400px] px-3 sm:px-4 lg:px-5">
+        {/* Mobile: logo + actions row */}
+        <div className="flex items-center justify-between gap-3 py-3 md:hidden">
+          <Link
+            href="/"
+            aria-label="Ninja Bazaar — go to homepage"
+            className="min-w-0 shrink transition-opacity hover:opacity-90 active:scale-[0.98]"
+          >
+            <h1 className="truncate font-bold text-[#006d44] text-xl sm:text-2xl">
+              Ninja Bazaar
+            </h1>
+          </Link>
+          <div className="flex shrink-0 items-center gap-2">
+            <Link
+              href="/cart"
+              className="relative flex items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:text-[#006d44]"
+            >
+              <ShoppingCart size={22} />
+              {totalItems > 0 && (
+                <div className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">
+                  {totalItems > 99 ? '99+' : totalItems}
+                </div>
+              )}
+            </Link>
+            {!session ? (
+              <Link
+                href="/login"
+                className="flex h-10 items-center justify-center rounded-lg bg-[#006d44] px-3 text-sm font-bold text-white shadow-md transition-all hover:bg-[#005a36] active:scale-95"
+              >
+                <User size={16} />
+              </Link>
+            ) : (
+              <DropdownMenu
+                open={desktopMenuOpen}
+                onOpenChange={setDesktopMenuOpen}
+              >
+                <DropdownMenuTrigger asChild>
+                  <button type="button" className="flex items-center gap-1">
+                    <Avatar sx={{ width: 36, height: 36 }}>
+                      <Image
+                        width={36}
+                        height={36}
+                        src={user?.profilePicture || '/default-user-img.jpg'}
+                        alt="User"
+                      />
+                    </Avatar>
+                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="z-50 w-44 rounded-lg border border-gray-200 bg-white py-2 shadow-lg"
+                >
+                  <DropdownMenuLabel className="px-4 py-2 font-semibold text-gray-700">
+                    Welcome {session.user?.name}!
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <Link href="/account">
+                    <DropdownMenuItem>Profile</DropdownMenuItem>
+                  </Link>
+                  <Link href="/messages">
+                    <DropdownMenuItem>Messages</DropdownMenuItem>
+                  </Link>
+                  <Link href="/orders">
+                    <DropdownMenuItem>Orders</DropdownMenuItem>
+                  </Link>
+                  <DropdownMenuItem
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    className="text-red-600"
+                  >
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
+        </div>
 
-        {/* All Cities Location Picker */}
-        <div className="hidden md:flex items-center gap-1.5 bg-[#eaf4fe] text-[#006d44] border border-[#d6e9fd] rounded-lg px-3 py-2 text-xs font-bold cursor-pointer hover:bg-[#dbeafe] transition-colors">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="14" height="14" fill="currentColor">
-            <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
-          </svg>
-          All Cities
+        {/* Mobile: full-width search */}
+        <div className="relative mb-3 md:hidden">
+          <div className="relative flex h-11 w-full items-center overflow-hidden rounded-lg border border-gray-200 bg-white focus-within:border-[#006d44]">
+            <input
+              type="text"
+              placeholder="Search products..."
+              className="h-full w-full pl-4 pr-14 text-sm font-semibold text-gray-700 placeholder-gray-400 focus:outline-none"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleOnEnter}
+            />
+            <button
+              onClick={() => handleSearch(searchQuery)}
+              className="absolute bottom-0 right-0 top-0 flex w-12 items-center justify-center text-white transition-opacity hover:opacity-90"
+              style={{
+                background:
+                  'linear-gradient(270deg, #007451 0%, #00DA98 155.17%)',
+              }}
+            >
+              <Search size={18} />
+            </button>
+          </div>
+          {searchDropdown}
+        </div>
+
+        {/* Desktop layout */}
+        <div className="hidden h-[134px] items-center justify-between gap-6 md:flex">
+          <div className="flex min-w-0 shrink-0 items-center gap-4">
+            <Link
+              href="/"
+              aria-label="Ninja Bazaar — go to homepage"
+              className="transition-opacity hover:opacity-90 active:scale-[0.98]"
+            >
+              <h1 className="font-bold text-[#006d44] text-3xl lg:text-[40px] leading-tight">
+                Ninja Bazaar
+              </h1>
+            </Link>
+            <div className="hidden items-center gap-1.5 rounded-lg border border-[#d6e9fd] bg-[#eaf4fe] px-3 py-2 text-xs font-bold text-[#006d44] transition-colors hover:bg-[#dbeafe] lg:flex">
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="14"
+                height="14"
+                fill="currentColor"
+              >
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5c-1.38 0-2.5-1.12-2.5-2.5s1.12-2.5 2.5-2.5 2.5 1.12 2.5 2.5-1.12 2.5-2.5 2.5z" />
+              </svg>
+              All Cities
+            </div>
+          </div>
+
+          <div className="relative mx-4 flex h-[50px] min-w-0 flex-1 max-w-[431px] items-center overflow-hidden rounded-lg border border-gray-200 bg-white focus-within:border-[#006d44]">
+            <input
+              type="text"
+              placeholder="Search Event, Industry Or Location"
+              className="h-full w-full pl-4 pr-[70px] text-sm font-semibold text-gray-700 placeholder-gray-400 focus:outline-none"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              onKeyDown={handleOnEnter}
+            />
+            <button
+              onClick={() => handleSearch(searchQuery)}
+              className="absolute bottom-0 right-0 top-0 flex w-[58px] items-center justify-center text-white transition-opacity hover:opacity-90"
+              style={{
+                background:
+                  'linear-gradient(270deg, #007451 0%, #00DA98 155.17%)',
+              }}
+            >
+              <Search size={18} />
+            </button>
+            {searchDropdown}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-4 lg:gap-5">
+            <button
+              type="button"
+              className="hidden text-gray-400 transition-colors hover:text-gray-600 lg:block"
+            >
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                viewBox="0 0 24 24"
+                width="24"
+                height="24"
+                fill="currentColor"
+              >
+                <path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z" />
+              </svg>
+            </button>
+
+            <Link
+              href="/cart"
+              className="relative flex items-center justify-center rounded-lg p-2 text-gray-500 transition-colors hover:text-[#006d44]"
+            >
+              <ShoppingCart size={22} />
+              {totalItems > 0 && (
+                <div className="absolute -right-0.5 -top-0.5 flex h-5 min-w-[20px] items-center justify-center rounded-full bg-red-600 text-[10px] font-bold text-white">
+                  {totalItems > 99 ? '99+' : totalItems}
+                </div>
+              )}
+            </Link>
+
+            {!session ? (
+              <Link
+                href="/login"
+                className="flex h-[50px] w-auto items-center justify-center gap-2 rounded-lg bg-[#006d44] px-5 text-sm font-bold tracking-wide text-white shadow-md shadow-green-900/10 transition-all hover:bg-[#005a36] active:scale-95 lg:w-[177px]"
+              >
+                <User size={16} />
+                <span className="hidden lg:inline">Login/Sign up</span>
+              </Link>
+            ) : (
+              <DropdownMenu
+                open={desktopMenuOpen}
+                onOpenChange={setDesktopMenuOpen}
+              >
+                <DropdownMenuTrigger asChild>
+                  <button
+                    type="button"
+                    className="relative flex cursor-pointer items-center gap-2"
+                  >
+                    <Avatar
+                      sx={{ width: 40, height: 40 }}
+                      className="rounded-full border-2 border-white shadow-md"
+                    >
+                      <Image
+                        width={40}
+                        height={40}
+                        src={user?.profilePicture || '/default-user-img.jpg'}
+                        alt="User"
+                      />
+                    </Avatar>
+                    <ChevronDown className="h-4 w-4 text-gray-600" />
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent
+                  align="end"
+                  className="z-50 w-44 rounded-lg border border-gray-200 bg-white py-2 shadow-lg"
+                >
+                  <DropdownMenuLabel className="px-4 py-2 font-semibold text-gray-700">
+                    Welcome {session.user?.name}!
+                  </DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <Link href="/account">
+                    <DropdownMenuItem className="cursor-pointer px-4 py-2 text-gray-600 hover:bg-gray-100">
+                      Profile
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/messages">
+                    <DropdownMenuItem className="cursor-pointer px-4 py-2 text-gray-600 hover:bg-gray-100">
+                      Messages
+                    </DropdownMenuItem>
+                  </Link>
+                  <Link href="/orders">
+                    <DropdownMenuItem className="cursor-pointer px-4 py-2 text-gray-600 hover:bg-gray-100">
+                      Orders
+                    </DropdownMenuItem>
+                  </Link>
+                  <DropdownMenuItem
+                    onClick={() => signOut({ callbackUrl: '/' })}
+                    className="cursor-pointer px-4 py-2 text-red-600"
+                  >
+                    Logout
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
       </div>
-
-      {/* Search Bar Group */}
-      <div className="relative flex items-center w-full max-w-[431px] h-[50px] border border-gray-200 bg-white rounded-lg overflow-hidden focus-within:border-[#006d44] text-sm">
-        <input
-          type="text"
-          placeholder="Search Event, Industry Or Location"
-          className="pl-4 pr-[70px] w-full h-full focus:outline-none text-gray-700 placeholder-gray-400 font-semibold"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          onKeyDown={handleOnEnter}
-        />
-        <button
-          onClick={() => handleSearch(searchQuery)}
-          className="absolute right-0 top-0 bottom-0 text-white flex items-center justify-center w-[58px] h-full cursor-pointer hover:opacity-90 transition-opacity"
-          style={{
-            background: 'linear-gradient(270deg, #007451 0%, #00DA98 155.17%)'
-          }}
-        >
-          <Search size={18} />
-        </button>
-
-
-
-        {showDropdown && searchResults.length > 0 && (
-          <div
-            className="absolute left-0 right-0 z-50 mt-2 overflow-hidden bg-white border rounded-md shadow-lg border-green"
-            style={{ top: '100%' }}
-            ref={dropdownRef}
-          >
-            {searchResults.map((keywords, index) => (
-              <div
-                key={index}
-                className="px-4 py-2 transition-colors cursor-pointer hover:bg-green hover:text-white"
-              >
-                <p
-                  className="text-green hover:text-white"
-                  onClick={() => handleSearch(keywords)}
-                >
-                  {keywords}
-                </p>
-              </div>
-            ))}
-          </div>
-        )}
-        {showDropdown && searchQuery.length > 0 && searchResults.length <= 0 && (
-          <div
-            ref={dropdownRef}
-            className="absolute left-0 right-0 z-50 mt-2 overflow-hidden bg-white border rounded-md shadow-lg top-full border-green"
-          >
-            <h1 className="p-4 text-green">{`${searchQuery} not found`}</h1>
-          </div>
-        )}
-      </div>
-
-      {/* Grid icon & Login Button group (Group 1171277272) */}
-      <div className="flex items-center gap-5">
-        {/* Grid menu icon */}
-        <button className="text-gray-400 hover:text-gray-600 transition-colors hidden md:block">
-          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-            <path d="M4 4h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 10h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4zM4 16h4v4H4zm6 0h4v4h-4zm6 0h4v4h-4z" />
-          </svg>
-        </button>
-
-        {/* Cart */}
-        <Link
-          href="/cart"
-          className="relative flex items-center justify-center p-2 text-gray-500 hover:text-[#006d44] transition-colors"
-        >
-          <ShoppingCart size={22} />
-          {totalItems > 0 && (
-            <div className="absolute -top-1 -right-1 h-5 w-5 bg-red-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full min-w-[20px]">
-              {totalItems > 99 ? '99+' : totalItems}
-            </div>
-          )}
-        </Link>
-
-        {/* Desktop Login button / Avatar dropdown */}
-        {!session ? (
-          <Link
-            href="/login"
-            className="w-[177px] h-[50px] flex items-center justify-center gap-2 rounded-lg bg-[#006d44] hover:bg-[#005a36] text-white font-bold text-sm tracking-wide transition-all shadow-md shadow-green-900/10 cursor-pointer active:scale-95"
-          >
-            <User size={16} />
-            <span>Login/Sing up</span>
-          </Link>
-        ) : (
-          <DropdownMenu
-            open={desktopMenuOpen}
-            onOpenChange={setDesktopMenuOpen}
-          >
-            <DropdownMenuTrigger asChild>
-              <div className="relative flex items-center gap-2 cursor-pointer">
-                <Avatar
-                  sx={{ width: 40, height: 40 }}
-                  className="rounded-full shadow-md border-2 border-white"
-                >
-                  <Image
-                    width={40}
-                    height={40}
-                    src={user?.profilePicture || '/default-user-img.jpg'}
-                    alt="User"
-                  />
-                </Avatar>
-                <ChevronDown className="w-4 h-4 text-gray-600" />
-              </div>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent className="absolute z-45 w-40 py-2 bg-white border border-gray-200 rounded-lg shadow-lg top-2 -right-8">
-              <DropdownMenuLabel className="px-4 py-2 font-semibold text-gray-700">
-                Welcome {session.user?.name}!
-              </DropdownMenuLabel>
-              <DropdownMenuSeparator />
-
-              <Link href="/account">
-                <DropdownMenuItem className="px-4 py-2 text-gray-600 rounded-md cursor-pointer hover:bg-gray-100">
-                  Profile
-                </DropdownMenuItem>
-              </Link>
-
-              <Link href="/messages">
-                <DropdownMenuItem className="px-4 py-2 text-gray-600 rounded-md cursor-pointer hover:bg-gray-100">
-                  Messages
-                </DropdownMenuItem>
-              </Link>
-
-              <Link href="/orders">
-                <DropdownMenuItem className="px-4 py-2 text-gray-600 rounded-md cursor-pointer hover:bg-gray-100">
-                  Orders
-                </DropdownMenuItem>
-              </Link>
-
-              <DropdownMenuItem
-                onClick={() => signOut({ callbackUrl: '/' })}
-                className="px-4 py-2 text-red-600 rounded-md cursor-pointer"
-              >
-                Logout
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        )}
-      </div>
-      </div>
     </header>
-
   )
 }
 

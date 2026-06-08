@@ -1,10 +1,12 @@
 'use client'
 import React, { useState } from 'react'
+import { useRouter, useSearchParams } from 'next/navigation'
 
 import { Input } from '@/components/ui/input'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
+import { Switch } from '@/components/ui/switch'
 import { Trash2, X } from 'lucide-react'
 import { z } from 'zod'
 import { useForm } from 'react-hook-form'
@@ -39,11 +41,69 @@ const productSchema = z.object({
   variantsOpen: z.boolean().default(false),
   MOQOpen: z.boolean().default(false),
   subCategory: z.string().optional(),
+  isSale: z.boolean().default(false),
+  salePrice: z.coerce.number().min(0).optional(),
+}).superRefine((data, ctx) => {
+  if (data.isSale) {
+    if (!data.salePrice || data.salePrice <= 0) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Sale price must be greater than 0',
+        path: ['salePrice'],
+      })
+    } else if (data.salePrice >= data.basePrice) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'Sale price must be less than base price',
+        path: ['salePrice'],
+      })
+    }
+  }
 })
 
 type ProductFormValues = z.infer<typeof productSchema>
 
-const Page = () => {
+type ExistingImage = {
+  id: string
+  urlpath: string
+}
+
+function groupVariantsByTitle(
+  dbVariants: Array<{
+    title: string
+    option: string
+    hasPrice: boolean
+    price: number | string
+  }>
+) {
+  const map = new Map<
+    string,
+    {
+      title: string
+      options: Array<{ value: string; hasPrice: boolean; price: number }>
+    }
+  >()
+
+  for (const variant of dbVariants) {
+    if (!map.has(variant.title)) {
+      map.set(variant.title, { title: variant.title, options: [] })
+    }
+    map.get(variant.title)!.options.push({
+      value: variant.option,
+      hasPrice: variant.hasPrice,
+      price: Number(variant.price),
+    })
+  }
+
+  return Array.from(map.values())
+}
+
+const PostPageContent = () => {
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const editProductId = searchParams.get('edit')
+  const isEditMode = Boolean(editProductId)
+
   const {
     register,
     handleSubmit,
@@ -56,13 +116,15 @@ const Page = () => {
     defaultValues: {
       productName: '',
       category: '',
-      productKeywords: [],
+      productKeywords: '',
       description: '',
       basePrice: 0,
       variantsOpen: false,
       MOQOpen: false,
       shippingMethods: false,
       subCategory: '',
+      isSale: false,
+      salePrice: 0,
     },
   })
 
@@ -71,10 +133,13 @@ const Page = () => {
   // Watch the checkbox values
   const variantsOpen = watch('variantsOpen')
   const MOQOpen = watch('MOQOpen')
+  const isSale = watch('isSale')
 
   // State for multiple images
-  const [productImages, setProductImages] = useState<File[]>([])
-  const [imagePreviews, setImagePreviews] = useState<string[]>([])
+  const [existingImages, setExistingImages] = useState<ExistingImage[]>([])
+  const [newImages, setNewImages] = useState<File[]>([])
+  const [newImagePreviews, setNewImagePreviews] = useState<string[]>([])
+  const [isLoadingProduct, setIsLoadingProduct] = useState(isEditMode)
   // Loading State
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -98,7 +163,18 @@ const Page = () => {
     },
   ])
 
-  // session
+  const [selectedColorIds, setSelectedColorIds] = useState<string[]>([])
+  const [selectedMaterialIds, setSelectedMaterialIds] = useState<string[]>([])
+  const [minOrderQuantity, setMinOrderQuantity] = useState<number | ''>('')
+  const [inventory, setInventory] = useState<number | ''>('')
+  const [specifications, setSpecifications] = useState<{ key: string; value: string }[]>([
+    { key: '', value: '' },
+  ])
+  const [availableColors, setAvailableColors] = useState<{ id: string; name: string; hexCode?: string }[]>([])
+  const [availableMaterials, setAvailableMaterials] = useState<{ id: string; name: string }[]>([])
+
+  const subCategoryValue = watch('subCategory')
+  const categoryValue = watch('category')
   const { data: session } = useSession()
 
   // Image handling functions
@@ -106,7 +182,7 @@ const Page = () => {
     const files = Array.from(event.target.files || [])
 
     // Limit to 5 images maximum
-    if (productImages.length + files.length > 5) {
+    if (existingImages.length + newImages.length + files.length > 5) {
       alert('Maximum 5 images allowed')
       return
     }
@@ -128,13 +204,12 @@ const Page = () => {
     if (validFiles.length === 0) return
 
     // Update images state
-    setProductImages((prev) => [...prev, ...validFiles])
+    setNewImages((prev) => [...prev, ...validFiles])
 
-    // Create previews for display only
     validFiles.forEach((file) => {
       const reader = new FileReader()
       reader.onload = (e) => {
-        setImagePreviews((prev) => [...prev, e.target?.result as string])
+        setNewImagePreviews((prev) => [...prev, e.target?.result as string])
       }
       reader.readAsDataURL(file)
     })
@@ -144,14 +219,24 @@ const Page = () => {
   }
 
   const removeImage = (index: number) => {
-    setProductImages((prev) => prev.filter((_, i) => i !== index))
-    setImagePreviews((prev) => prev.filter((_, i) => i !== index))
+    if (index < existingImages.length) {
+      setExistingImages((prev) => prev.filter((_, i) => i !== index))
+    } else {
+      const newIndex = index - existingImages.length
+      setNewImages((prev) => prev.filter((_, i) => i !== newIndex))
+      setNewImagePreviews((prev) => prev.filter((_, i) => i !== newIndex))
+    }
   }
 
-  const clearAllImages = () => {
-    setProductImages([])
-    setImagePreviews([])
+  const clearNewImages = () => {
+    setNewImages([])
+    setNewImagePreviews([])
   }
+
+  const allImagePreviews = [
+    ...existingImages.map((img) => img.urlpath),
+    ...newImagePreviews,
+  ]
 
   const addShippingMethod = () => {
     setShippingMethods((prev) => [
@@ -263,42 +348,139 @@ const Page = () => {
     fetchCats();
   }, []);
 
+  React.useEffect(() => {
+    const fetchSettings = async () => {
+      try {
+        const selectedCat = fetchedCategories.find((c: { id: string }) => c.id === categoryValue)
+        const params = new URLSearchParams()
+        if (selectedCat?.name) params.set('category', selectedCat.name)
+        const res = await fetch(`/api/product-settings?${params.toString()}`)
+        const data = await res.json()
+        setAvailableColors(data.colors || [])
+        setAvailableMaterials(data.materials || [])
+      } catch (err) {
+        console.error('Failed to fetch product settings', err)
+      }
+    }
+    fetchSettings()
+  }, [categoryValue, fetchedCategories])
+
+  React.useEffect(() => {
+    if (!editProductId) return
+
+    const loadProduct = async () => {
+      try {
+        setIsLoadingProduct(true)
+        const res = await fetch(`/api/seller-products/get?id=${editProductId}`)
+        if (!res.ok) {
+          toast.error('Failed to load product for editing')
+          router.push('/seller/products')
+          return
+        }
+
+        const product = await res.json()
+
+        reset({
+          productName: product.name,
+          category: product.categoryId || product.category?.id || '',
+          subCategory: product.subCategoryId || product.subCategory?.id || 'none',
+          productKeywords: product.keywords?.join(', ') || '',
+          description: product.description,
+          basePrice: Number(product.basePrice),
+          isSale: product.isSale,
+          salePrice: Number(product.salePrice ?? 0),
+          variantsOpen: product.variants?.length > 0,
+          MOQOpen: false,
+          shippingMethods: false,
+        })
+
+        setExistingImages(
+          (product.images || []).map(
+            (img: { id: string; urlpath: string }) => ({
+              id: img.id,
+              urlpath: img.urlpath,
+            })
+          )
+        )
+        setNewImages([])
+        setNewImagePreviews([])
+
+        if (product.shippingMethods?.length > 0) {
+          setShippingMethods(
+            product.shippingMethods.map(
+              (method: {
+                name: string
+                price: number | string
+                estimatedDays: string
+                description?: string
+                isActive: boolean
+              }) => ({
+                name: method.name,
+                price: Number(method.price),
+                estimatedDays: method.estimatedDays,
+                description: method.description || '',
+                isActive: method.isActive,
+              })
+            )
+          )
+        }
+
+        if (product.variants?.length > 0) {
+          const grouped = groupVariantsByTitle(product.variants)
+          setVariants(
+            grouped.length > 0
+              ? grouped
+              : [
+                  {
+                    title: '',
+                    options: [{ value: '', hasPrice: false, price: 0 }],
+                  },
+                ]
+          )
+        }
+
+        setSelectedColorIds(product.colorIds || [])
+        setSelectedMaterialIds(product.materialIds || [])
+        setMinOrderQuantity(product.minOrderQuantity ?? '')
+        setInventory(product.inventory ?? '')
+        setSpecifications(
+          product.specifications?.length
+            ? product.specifications.map((s: { key: string; value: string }) => ({
+                key: s.key,
+                value: s.value,
+              }))
+            : [{ key: '', value: '' }]
+        )
+      } catch (error) {
+        console.error('Failed to load product', error)
+        toast.error('Failed to load product for editing')
+        router.push('/seller/products')
+      } finally {
+        setIsLoadingProduct(false)
+      }
+    }
+
+    loadProduct()
+  }, [editProductId, reset, router]);
+
   const selectedCategoryObj = React.useMemo(() => {
-    return fetchedCategories.find(c => c.name === watch('category'));
+    return fetchedCategories.find(c => c.id === watch('category'));
   }, [fetchedCategories, watch('category')]);
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
-      // Validate at least one image
-      console.log('Full session object:', session)
-      console.log('Session user:', session?.user)
-      console.log('Session user ID:', session?.user?.id)
-      console.log('Session user ID type:', typeof session?.user?.id)
-
-      console.log('FormData to send:', {
-        name: data.productName,
-        category: data.category,
-        keywords: data.productKeywords.join(','),
-        description: data.description,
-        basePrice: data.basePrice,
-        sellerId: session?.user.id,
-        productImages,
-        shippingMethods,
-      })
-
-      if (productImages.length === 0) {
-        alert('Please select at least one product image')
+      if (existingImages.length + newImages.length === 0) {
+        toast.error('Please select at least one product image')
         return
       }
 
-      // Validate at least one shipping method
       const validShippingMethods = shippingMethods.filter(
         (method) =>
           method.name.trim() && method.price >= 0 && method.estimatedDays
       )
 
       if (validShippingMethods.length === 0) {
-        alert('Please add at least one valid shipping method')
+        toast.error('Please add at least one valid shipping method')
         return
       }
 
@@ -312,18 +494,44 @@ const Page = () => {
           m.price >= 0
       )
 
+      const keywords =
+        typeof data.productKeywords === 'string'
+          ? data.productKeywords
+          : data.productKeywords.join(',')
+
       const formDataToSend = new FormData()
       formDataToSend.append('name', data.productName)
-      formDataToSend.append('category', data.category)
+      formDataToSend.append('categoryId', data.category)
       if (data.subCategory) {
-        formDataToSend.append('subCategory', data.subCategory)
+        formDataToSend.append('subCategoryId', data.subCategory)
       }
-      formDataToSend.append('keywords', data.productKeywords.join(','))
+      formDataToSend.append('colorIds', JSON.stringify(selectedColorIds))
+      formDataToSend.append('materialIds', JSON.stringify(selectedMaterialIds))
+      if (minOrderQuantity !== '') {
+        formDataToSend.append('minOrderQuantity', String(minOrderQuantity))
+      }
+      if (inventory !== '') {
+        formDataToSend.append('inventory', String(inventory))
+      }
+      formDataToSend.append(
+        'specifications',
+        JSON.stringify(specifications.filter((s) => s.key.trim() && s.value.trim()))
+      )
+      formDataToSend.append('keywords', keywords)
       formDataToSend.append('description', data.description)
       formDataToSend.append('basePrice', data.basePrice.toString())
+      formDataToSend.append('isSale', String(data.isSale))
+      if (data.isSale && data.salePrice) {
+        formDataToSend.append('salePrice', data.salePrice.toString())
+      }
       formDataToSend.append('sellerId', session?.user.id ?? '')
-      // Add all images
-      productImages.forEach((image) => {
+
+      if (isEditMode && editProductId) {
+        formDataToSend.append('productId', editProductId)
+        formDataToSend.append('existingImages', JSON.stringify(existingImages))
+      }
+
+      newImages.forEach((image) => {
         formDataToSend.append('productImages', image)
       })
       formDataToSend.append(
@@ -331,79 +539,41 @@ const Page = () => {
         JSON.stringify(filteredShippingMethods)
       )
 
-      // Add variants if enabled
       if (data.variantsOpen) {
         const filteredVariants = variants.filter((v) => v.title.trim())
         formDataToSend.append('variants', JSON.stringify(filteredVariants))
       }
 
-      // Add MOQs if enabled (when implemented)
       if (data.MOQOpen) {
         const filteredMoqs = moqs.filter((m) => m.quantityRange.trim())
         formDataToSend.append('moqs', JSON.stringify(filteredMoqs))
       }
 
-      const response = await fetch('/api/products/post', {
-        method: 'POST',
-        body: formDataToSend,
-      })
+      const response = await fetch(
+        isEditMode ? '/api/products/put' : '/api/products/post',
+        {
+          method: 'POST',
+          body: formDataToSend,
+        }
+      )
 
       const result = await response.json()
 
       if (response.ok) {
-        toast.success('Product created successfully!')
-        console.log('Created product:', result.product)
-
-        // Reset form
-        reset() // if using react-hook-form reset function
-        setProductImages([])
-        setImagePreviews([])
-        setVariants([
-          {
-            title: '',
-            options: [{ value: '', hasPrice: false, price: 0 }],
-          },
-        ])
-        setMoqs([{ quantityRange: '', price: 0 }])
-
-        // DEBUG: Log FormData contents
-        console.log('FormData contents:')
-        for (const [key, value] of formDataToSend.entries()) {
-          if (value instanceof File) {
-            console.log(
-              `${key}:`,
-              `File(${value.name}, ${value.size} bytes, ${value.type})`
-            )
-          } else {
-            console.log(`${key}:`, value)
-          }
-        }
-
-        // Prepare final data for API
-        const apiData = {
-          productName: data.productName,
-          category: data.category,
-          productKeywords: data.productKeywords,
-          description: data.description,
-          basePrice: data.basePrice,
-          productImages: productImages,
-          variants: data.variantsOpen
-            ? variants.filter((v) => v.title.trim())
-            : [],
-          moqs: data.MOQOpen ? moqs.filter((m) => m.quantityRange.trim()) : [],
-          shippingMethods: data.shippingMethods
-            ? shippingMethods.filter((m) => m.name.trim())
-            : [],
-        }
-
-        console.log('API Data:', apiData)
-        console.log('Number of images:', productImages.length)
+        toast.success(
+          isEditMode
+            ? 'Product updated successfully!'
+            : 'Product created successfully!'
+        )
+        router.push('/seller/products')
+        return result
       }
 
+      toast.error(result.error || result.message || 'Something went wrong')
       return result
     } catch (error) {
       console.log(error)
-      alert('Network error occurred. Please try again.')
+      toast.error('Network error occurred. Please try again.')
     } finally {
       setIsSubmitting(false)
     }
@@ -411,6 +581,14 @@ const Page = () => {
 
   const onError = (errors: Record<string, unknown>) => {
     console.log('Form validation errors:', errors)
+  }
+
+  if (isLoadingProduct) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green" />
+      </div>
+    )
   }
 
   return (
@@ -421,7 +599,9 @@ const Page = () => {
       >
         {/* Product Information */}
         <div className="border-b pb-8 border-gray-200">
-          <h1 className="text-2xl font-bold">Product Information</h1>
+          <h1 className="text-2xl font-bold">
+            {isEditMode ? 'Edit Product' : 'Product Information'}
+          </h1>
           <div className="space-y-6 mt-6">
             {/* PRODUCT NAME */}
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
@@ -466,7 +646,7 @@ const Page = () => {
                   <SelectContent>
                     <SelectGroup>
                       {fetchedCategories.map((category, index) => (
-                        <SelectItem key={index} value={category.name}>
+                        <SelectItem key={index} value={category.id}>
                           {category.name}
                         </SelectItem>
                       ))}
@@ -503,7 +683,7 @@ const Page = () => {
                       <SelectGroup>
                         <SelectItem value="none">None</SelectItem>
                         {selectedCategoryObj.subCategories.map((sub: any, index: number) => (
-                          <SelectItem key={index} value={sub.name}>
+                          <SelectItem key={index} value={sub.id}>
                             {sub.name}
                           </SelectItem>
                         ))}
@@ -513,6 +693,141 @@ const Page = () => {
                 </div>
               </div>
             )}
+
+            {/* COLORS, MATERIALS, MOQ */}
+            <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 mt-4">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>Product Attributes</h2>
+              </div>
+              <div className="flex-1 space-y-4">
+                {availableColors.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-2">Colors</label>
+                    <div className="flex flex-wrap gap-3">
+                      {availableColors.map((color) => (
+                        <label key={color.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedColorIds.includes(color.id)}
+                            onChange={() =>
+                              setSelectedColorIds((prev) =>
+                                prev.includes(color.id) ? prev.filter((id) => id !== color.id) : [...prev, color.id]
+                              )
+                            }
+                          />
+                          <span className="w-4 h-4 rounded-full border" style={{ backgroundColor: color.hexCode || '#e5e7eb' }} />
+                          {color.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {availableMaterials.length > 0 && (
+                  <div>
+                    <label className="text-sm font-medium text-gray-700 block mb-2">Materials</label>
+                    <div className="flex flex-wrap gap-3">
+                      {availableMaterials.map((material) => (
+                        <label key={material.id} className="flex items-center gap-2 text-sm cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selectedMaterialIds.includes(material.id)}
+                            onChange={() =>
+                              setSelectedMaterialIds((prev) =>
+                                prev.includes(material.id) ? prev.filter((id) => id !== material.id) : [...prev, material.id]
+                              )
+                            }
+                          />
+                          {material.name}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Min. Order (Pieces)</label>
+                  <Input
+                    type="number"
+                    min={1}
+                    placeholder="e.g. 100"
+                    value={minOrderQuantity}
+                    onChange={(e) => setMinOrderQuantity(e.target.value ? parseInt(e.target.value, 10) : '')}
+                    className="max-w-xs h-10"
+                  />
+                </div>
+
+                <div>
+                  <label className="text-sm font-medium text-gray-700 block mb-1">Inventory (Stock)</label>
+                  <Input
+                    type="number"
+                    min={0}
+                    placeholder="e.g. 500"
+                    value={inventory}
+                    onChange={(e) => setInventory(e.target.value ? parseInt(e.target.value, 10) : '')}
+                    className="max-w-xs h-10"
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* PRODUCT SPECIFICATIONS */}
+            <div className="flex flex-col md:flex-row md:items-start gap-2 md:gap-6 mt-4">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>Specifications</h2>
+              </div>
+              <div className="flex-1 space-y-3">
+                <p className="text-xs text-gray-500 italic">
+                  Add product specs (e.g. Noise cancelling, Bluetooth version, Material)
+                </p>
+                {specifications.map((spec, index) => (
+                  <div key={index} className="flex flex-col sm:flex-row gap-2 items-start">
+                    <Input
+                      type="text"
+                      placeholder="Spec name (e.g. Bluetooth)"
+                      value={spec.key}
+                      onChange={(e) => {
+                        const next = [...specifications]
+                        next[index] = { ...next[index], key: e.target.value }
+                        setSpecifications(next)
+                      }}
+                      className="h-10 flex-1"
+                    />
+                    <Input
+                      type="text"
+                      placeholder="Value (e.g. v5.4)"
+                      value={spec.value}
+                      onChange={(e) => {
+                        const next = [...specifications]
+                        next[index] = { ...next[index], value: e.target.value }
+                        setSpecifications(next)
+                      }}
+                      className="h-10 flex-1"
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="icon"
+                      onClick={() =>
+                        setSpecifications((prev) =>
+                          prev.length > 1 ? prev.filter((_, i) => i !== index) : prev
+                        )
+                      }
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                ))}
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="h-9"
+                  onClick={() => setSpecifications((prev) => [...prev, { key: '', value: '' }])}
+                >
+                  + Add Specification
+                </Button>
+              </div>
+            </div>
 
             {/* PRODUCT KEYWORDS */}
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
@@ -590,6 +905,45 @@ const Page = () => {
               </div>
             </div>
 
+            {/* ON SALE */}
+            <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
+              <div className="w-full md:w-36 flex-shrink-0">
+                <h2>On Sale</h2>
+              </div>
+              <div className="flex-1 space-y-3">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={isSale}
+                    onCheckedChange={(checked) => {
+                      setValue('isSale', checked)
+                      if (!checked) setValue('salePrice', 0)
+                    }}
+                  />
+                  <span className="text-sm text-gray-600">
+                    Mark this product as on sale
+                  </span>
+                </div>
+                {isSale && (
+                  <div className="flex flex-row items-center space-x-2">
+                    <span className="text-lg font-bold text-gray-500">₹</span>
+                    <Input
+                      type="number"
+                      placeholder="Sale price"
+                      step="0.01"
+                      min="0"
+                      className="w-auto h-10"
+                      {...register('salePrice')}
+                    />
+                  </div>
+                )}
+                {errors.salePrice && (
+                  <span className="text-red-500 text-xs mt-1 block">
+                    {errors.salePrice.message}
+                  </span>
+                )}
+              </div>
+            </div>
+
             <div className="flex flex-col md:flex-row md:items-center gap-2 md:gap-6">
               <div className="w-full md:w-36 flex-shrink-0">
                 <h2>
@@ -652,20 +1006,20 @@ const Page = () => {
                     type="button"
                     variant="ghost"
                     size="icon"
-                    onClick={clearAllImages}
-                    disabled={productImages.length === 0}
+                    onClick={clearNewImages}
+                    disabled={newImages.length === 0}
                   >
                     <Trash2 className="h-4 w-4" />
                   </Button>
                 </div>
                 <span className="text-xs text-gray-500 font-light italic">
                   Note: You can select multiple images (max 5, up to 5MB each)
+                  {isEditMode && ' — existing images are kept unless removed'}
                 </span>
 
-                {/* Image Previews */}
-                {imagePreviews.length > 0 && (
+                {allImagePreviews.length > 0 && (
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4 mt-4">
-                    {imagePreviews.map((preview, index) => (
+                    {allImagePreviews.map((preview, index) => (
                       <div key={index} className="relative group">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
@@ -688,9 +1042,9 @@ const Page = () => {
                   </div>
                 )}
 
-                {productImages.length > 0 && (
+                {allImagePreviews.length > 0 && (
                   <span className="text-sm text-green-600">
-                    {productImages.length} image(s) selected
+                    {allImagePreviews.length} image(s) total
                   </span>
                 )}
               </div>
@@ -949,18 +1303,43 @@ const Page = () => {
           </div>
         )}
 
-        <div className="flex justify-end mt-10">
+        <div className="flex justify-end gap-3 mt-10">
+          <Button
+            type="button"
+            variant="outline"
+            onClick={() => router.push('/seller/products')}
+          >
+            Cancel
+          </Button>
           <Button
             type="submit"
             disabled={isSubmitting}
             className="h-10 px-4 bg-[#007350] hover:bg-[#007350]/90 rounded-lg"
           >
-            {isSubmitting ? 'Creating Product...' : 'Post Product'}
+            {isSubmitting
+              ? isEditMode
+                ? 'Saving Changes...'
+                : 'Creating Product...'
+              : isEditMode
+                ? 'Save Changes'
+                : 'Post Product'}
           </Button>
         </div>
       </form>
     </>
   )
 }
+
+const Page = () => (
+  <React.Suspense
+    fallback={
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-green" />
+      </div>
+    }
+  >
+    <PostPageContent />
+  </React.Suspense>
+)
 
 export default Page

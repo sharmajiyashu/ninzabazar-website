@@ -64,7 +64,7 @@ export default function BuyerAccountPage() {
   }
 
   return (
-    <div className="mx-2 my-4 md:mx-40 md:my-20">
+    <div className="page-container animate-fade-up">
       <AccountTabs {...formattedData} />
     </div>
   )

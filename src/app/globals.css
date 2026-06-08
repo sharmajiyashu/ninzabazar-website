@@ -51,6 +51,12 @@
 
 body {
   font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
+  min-width: 0;
+}
+
+html {
+  scroll-behavior: smooth;
 }
 
 :root {
@@ -241,4 +247,52 @@ body {
 .no-spinner:focus,
 .no-spinner:hover {
   -moz-appearance: textfield;
-}
+}
+
+@layer utilities {
+  .page-container {
+    @apply mx-auto w-full max-w-[1400px] px-3 sm:px-4 lg:px-5 py-3 md:py-5;
+  }
+
+  .animate-fade-up {
+    animation: fade-up 0.45s ease-out both;
+  }
+
+  .animate-fade-in-soft {
+    animation: fade-in-soft 0.35s ease-out both;
+  }
+}
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes fade-in-soft {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes float-animation {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-8px);
+  }
+}
+
+.animate-float {
+  animation: float-animation 4s ease-in-out infinite;
+}

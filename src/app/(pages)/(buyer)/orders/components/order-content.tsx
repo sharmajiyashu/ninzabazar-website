@@ -155,7 +155,7 @@ const OrderContent: React.FC<OrdersPageProps> = ({
       await axios.put('/api/buyer-confirm-receipt', {
         orderId: selectedOrder.orderId,
       })
-      toast.success('Order marked as delivered.')
+      toast.success('Order confirmed. Payment released to seller.')
       setOpenConfirm(false)
       router.refresh()
     } catch (error) {

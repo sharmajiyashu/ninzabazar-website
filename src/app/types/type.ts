@@ -173,9 +173,11 @@ export interface ProductDataProps {
   createdAt: string
   updatedAt: string
   basePrice: number
-  category: string
+  category?: { id: string, name: string } | null
+  subCategory?: { id: string, name: string } | null
   isSale: boolean
   isActive: boolean
+  adminApproved?: boolean
   salePrice?: number
   keywords: string[]
   totalPurchases: number
@@ -286,11 +288,14 @@ export interface CartItem {
     }
   }
   images: string
+  sellerId?: string
   product?: {
     seller: {
       id: string
     }
     shippingMethods: ShippingMethod[]
+    variants?: ProductVariant[]
+    colors?: { id: string; name: string }[]
   }
   variantCombination: string[] // Array of variant IDs
   variants: ProductVariant[]

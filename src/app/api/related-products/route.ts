@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma'
+import { liveProductWhere } from '@/lib/product-status'
 import { NextResponse } from 'next/server'
 
 export async function GET(req: Request) {
@@ -15,16 +16,12 @@ export async function GET(req: Request) {
 
     const relatedProducts = await prisma.product.findMany({
       where: {
-        status: 'approved',
-        isActive: true,
+        ...liveProductWhere(),
         AND: [
           {
             id: {
               not: id || undefined,
             },
-          },
-          {
-            isActive: true,
           },
         ],
         ...(keywords

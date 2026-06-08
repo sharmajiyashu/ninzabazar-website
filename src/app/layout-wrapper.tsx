@@ -1,4 +1,5 @@
 'use client'
+
 import { usePathname } from 'next/navigation'
 import NavBar from './components/nav-bar'
 import Footer from './components/footer'
@@ -19,29 +20,30 @@ const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
   ]
   const isAuthRoute = noHeaderFooterRoutes.includes(pathname)
 
-  if (isAuthRoute)
+  if (isAuthRoute) {
     return (
       <LocalizationProvider dateAdapter={AdapterDayjs}>
         {children}
       </LocalizationProvider>
     )
-
+  }
 
   if (status === 'loading' || !session) {
     return (
-      <>
-        <NavBar />
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          {children}
-        </LocalizationProvider>
-        <Footer />
-      </>
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <div className="flex min-h-screen min-w-0 flex-col">
+          <NavBar />
+          <main className="min-w-0 flex-1 animate-fade-in-soft">{children}</main>
+          <Footer />
+        </div>
+      </LocalizationProvider>
     )
   }
 
   const userRole = session?.user?.role
+  const isPublicHome = pathname === '/'
 
-  if (userRole === 'SELLER') {
+  if (userRole === 'SELLER' && !isPublicHome) {
     return (
       <DashboardShell>
         <LocalizationProvider dateAdapter={AdapterDayjs}>
@@ -52,11 +54,13 @@ const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
   }
 
   return (
-    <>
-      <NavBar />
-      {children}
-      <Footer />
-    </>
+    <LocalizationProvider dateAdapter={AdapterDayjs}>
+      <div className="flex min-h-screen min-w-0 flex-col">
+        <NavBar />
+        <main className="min-w-0 flex-1 animate-fade-in-soft">{children}</main>
+        <Footer />
+      </div>
+    </LocalizationProvider>
   )
 }
 

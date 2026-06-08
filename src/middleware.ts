@@ -66,12 +66,10 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(url)
   }
 
-  // Redirect logged-in sellers trying to access login or homepage
-  if (token?.role === 'SELLER') {
-    if (pathname === sellerSignInPath || pathname === homepage) {
-      url.pathname = '/seller/dashboard'
-      return NextResponse.redirect(url)
-    }
+  // Redirect logged-in sellers away from seller login only (allow public homepage)
+  if (token?.role === 'SELLER' && pathname === sellerSignInPath) {
+    url.pathname = '/seller/dashboard'
+    return NextResponse.redirect(url)
   }
 
   // Redirect buyer if not email verified
@@ -121,7 +119,8 @@ export async function middleware(req: NextRequest) {
   if (
     token?.role === 'SELLER' &&
     token?.storeStatus === 'pending' &&
-    pathname !== '/seller/pending' // guard condition to prevent too many redirs
+    pathname !== '/seller/pending' &&
+    pathname !== homepage
   ) {
     url.pathname = '/seller/pending'
     return NextResponse.redirect(new URL('/seller/pending', req.url))

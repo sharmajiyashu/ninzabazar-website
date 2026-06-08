@@ -60,10 +60,17 @@ export function DashboardSidebar() {
       {/* Brand Header */}
       <div className="flex h-16 shrink-0 items-center px-6">
         <Link
-          href="/seller/dashboard"
+          href="/"
+          aria-label="Ninja Bazaar — go to homepage"
           className="flex min-w-0 items-center gap-2.5 transition-transform hover:opacity-90 active:scale-[0.98]"
         >
-          {/* Replaced filive logo with text for Ninja Bazaar or you can place logo image if available */}
+          <img
+            src="/img/authentication/shopping_cart_3d.png"
+            alt=""
+            width={32}
+            height={32}
+            className="h-8 w-8 shrink-0 object-contain"
+          />
           <span className="text-xl font-bold text-primary">Ninja Bazaar</span>
         </Link>
       </div>

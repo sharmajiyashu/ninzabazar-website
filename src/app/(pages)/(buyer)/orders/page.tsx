@@ -51,7 +51,7 @@ const OrdersPage = () => {
   }
 
   return (
-    <div className="px-2 sm:px-4 mt-10 mb-20 md:px-40">
+    <div className="page-container animate-fade-up">
       <Tabs defaultValue="allOrders">
         <div className="overflow-x-auto no-scrollbar -mx-2 sm:mx-0">
           <TabsList className="flex w-max min-w-full py-4 md:py-6 rounded-lg md:rounded-2xl gap-2 px-2 sm:px-0">

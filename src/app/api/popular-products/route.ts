@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma'
+import { liveProductWhere } from '@/lib/product-status'
 import { NextResponse } from 'next/server'
 
 export async function GET(req: Request) {
@@ -7,9 +8,7 @@ export async function GET(req: Request) {
     const limit = parseInt(searchParams.get('limit') || '28')
 
     const products = await prisma.product.findMany({
-      where: {
-        isActive: true,
-      },
+      where: liveProductWhere(),
       include: {
         images: {
           where: { isDefault: true },

@@ -1,6 +1,11 @@
 import { NextResponse } from 'next/server'
-import { supabase } from '@/lib/supabaseClient'
 import { prisma } from '@/lib/prisma'
+import {
+  getValidImageFiles,
+  uploadProductImages,
+} from '@/lib/product-image-upload'
+import { saveProductAttributes } from '@/lib/save-product-attributes'
+import { saveProductSpecifications } from '@/lib/save-product-specifications'
 
 export async function POST(req: Request) {
   if (req.method !== 'POST') {
@@ -12,11 +17,13 @@ export async function POST(req: Request) {
 
     // Extract product data
     const productName = formData.get('name') as string
-    const productCategory = formData.get('category') as string
-    const productSubCategory = formData.get('subCategory') as string | null
+    const categoryId = formData.get('categoryId') as string
+    const subCategoryId = formData.get('subCategoryId') as string | null
     const productKeywords = formData.get('keywords') as string
     const description = formData.get('description') as string
     const basePrice = formData.get('basePrice') as string
+    const isSale = formData.get('isSale') === 'true'
+    const salePriceRaw = formData.get('salePrice') as string | null
     const sellerId = formData.get('sellerId') as string
     const variantsRaw = formData.get('variants') as string
     const shippingMethodsRaw = formData.get('shippingMethods') as string
@@ -38,12 +45,12 @@ export async function POST(req: Request) {
     console.log('Seller found:', seller.id, seller.email)
 
     // Extract images
-    const productImages = formData.getAll('productImages') as File[]
+    const productImages = getValidImageFiles(formData)
 
     // Validate required fields
     if (
       !productName ||
-      !productCategory ||
+      !categoryId ||
       !description ||
       !basePrice ||
       !sellerId
@@ -61,6 +68,24 @@ export async function POST(req: Request) {
       )
     }
 
+    const parsedBasePrice = parseFloat(basePrice)
+    const parsedSalePrice = salePriceRaw ? parseFloat(salePriceRaw) : null
+
+    if (isSale) {
+      if (!parsedSalePrice || parsedSalePrice <= 0) {
+        return NextResponse.json(
+          { error: 'Sale price must be greater than 0 when product is on sale' },
+          { status: 400 }
+        )
+      }
+      if (parsedSalePrice >= parsedBasePrice) {
+        return NextResponse.json(
+          { error: 'Sale price must be less than base price' },
+          { status: 400 }
+        )
+      }
+    }
+
     // Process keywords
     const keywordsArray = productKeywords
       ? productKeywords
@@ -69,39 +94,16 @@ export async function POST(req: Request) {
         .filter(Boolean)
       : []
 
-    // Upload all images to Supabase
-    const uploadPromises = productImages.map(async (image, index) => {
-      const filename = `${Date.now()}_${index}_${image.name}`
-      const arrayBuffer = await image.arrayBuffer()
-
-      return await supabase.storage
-        .from('images/product-images')
-        .upload(filename, new Uint8Array(arrayBuffer), {
-          contentType: image.type,
-          cacheControl: '3600',
-          upsert: false,
-        })
-    })
-    console.log('results:', uploadPromises)
-    const uploadResults = await Promise.all(uploadPromises)
-    console.log('Upload results:', uploadResults)
-    // Check for upload errors
-    const failedUploads = uploadResults.filter((result) => result.error)
-    if (failedUploads.length > 0) {
-      console.error('Upload errors:', failedUploads)
-      return NextResponse.json({ message: 'Some images failed to upload' }, { status: 500 })
+    const uploadResult = await uploadProductImages(productImages)
+    if (uploadResult.error) {
+      console.error('Upload errors:', uploadResult.error)
+      return NextResponse.json(
+        { error: `Image upload failed: ${uploadResult.error}` },
+        { status: 500 }
+      )
     }
 
-    // Get all public URLs
-    const publicUrls = await Promise.all(
-      uploadResults.map((result) =>
-        supabase.storage
-          .from('images/product-images')
-          .getPublicUrl(result.data?.path || '')
-      )
-    )
-
-    const imageUrls = publicUrls.map((url) => url.data.publicUrl)
+    const imageUrls = uploadResult.urls
 
     let variants = undefined
     if (
@@ -263,10 +265,14 @@ export async function POST(req: Request) {
         isActive: false,
         keywords: keywordsArray,
         description,
-        category: productCategory,
-        subCategory: productSubCategory && productSubCategory !== 'none' ? productSubCategory : null,
-        basePrice: parseFloat(basePrice),
-        sellerId: seller.sellerProfile.id,
+        category: { connect: { id: categoryId } },
+        ...(subCategoryId && subCategoryId !== 'none' && {
+          subCategory: { connect: { id: subCategoryId } }
+        }),
+        basePrice: parsedBasePrice,
+        isSale,
+        salePrice: isSale ? parsedSalePrice : null,
+        seller: { connect: { id: seller.sellerProfile.id } },
         images: {
           create: imageUrls.map((url, index) => ({
             urlpath: url,
@@ -280,8 +286,33 @@ export async function POST(req: Request) {
         variants: true,
         images: true,
         shippingMethods: true,
+        category: true,
       },
     })
+
+    const colorIdsRaw = formData.get('colorIds') as string | null
+    const materialIdsRaw = formData.get('materialIds') as string | null
+    const minOrderRaw = formData.get('minOrderQuantity') as string | null
+    const inventoryRaw = formData.get('inventory') as string | null
+    const specificationsRaw = formData.get('specifications') as string | null
+
+    const colorIds = colorIdsRaw ? JSON.parse(colorIdsRaw) : []
+    const materialIds = materialIdsRaw ? JSON.parse(materialIdsRaw) : []
+    const minOrderQuantity = minOrderRaw ? parseInt(minOrderRaw, 10) : null
+    const inventory = inventoryRaw ? parseInt(inventoryRaw, 10) : 0
+    const specifications = specificationsRaw ? JSON.parse(specificationsRaw) : []
+
+    await saveProductAttributes(product.id, {
+      colorIds: Array.isArray(colorIds) ? colorIds : [],
+      materialIds: Array.isArray(materialIds) ? materialIds : [],
+      minOrderQuantity: minOrderQuantity && !Number.isNaN(minOrderQuantity) ? minOrderQuantity : null,
+      inventory: !Number.isNaN(inventory) ? inventory : 0,
+    })
+
+    await saveProductSpecifications(
+      product.id,
+      Array.isArray(specifications) ? specifications : []
+    )
 
     return NextResponse.json(
       {
@@ -289,7 +320,7 @@ export async function POST(req: Request) {
         product: {
           id: product.id,
           name: product.name,
-          category: product.category,
+          category: product.category?.name,
           basePrice: product.basePrice,
           imageUrls: imageUrls,
           variants: product.variants,

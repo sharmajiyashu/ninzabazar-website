@@ -1,5 +1,7 @@
 import prisma from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { loadProductAttributes } from '@/lib/save-product-attributes'
+import { loadProductSpecifications } from '@/lib/save-product-specifications'
 
 export async function GET(req: Request) {
   if (req.method !== 'GET') {
@@ -12,10 +14,10 @@ export async function GET(req: Request) {
   }
   try {
     const product = await prisma.product.findUnique({
-      where: {
-        id: productId,
-      },
+      where: { id: productId },
       include: {
+        category: { select: { id: true, name: true } },
+        subCategory: { select: { id: true, name: true } },
         reviews: {
           select: {
             id: true,
@@ -41,11 +43,7 @@ export async function GET(req: Request) {
           },
         },
         orderItems: {
-          where: {
-            order: {
-              status: 'COMPLETED',
-            },
-          },
+          where: { order: { status: 'COMPLETED' } },
         },
         images: {
           select: {
@@ -61,12 +59,35 @@ export async function GET(req: Request) {
             title: true,
             option: true,
             price: true,
+            hasPrice: true,
           },
         },
         seller: {
           select: {
+            id: true,
             userId: true,
             companyName: true,
+            shopName: true,
+            businessRegisteredName: true,
+            businessPhoneNumber: true,
+            sellerPhoneNumber: true,
+            description: true,
+            registeredAddress: {
+              select: {
+                street: true,
+                city: true,
+                state: true,
+                postalCode: true,
+                country: true,
+              },
+            },
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                profilePicture: true,
+              },
+            },
           },
         },
         shippingMethods: {
@@ -81,13 +102,50 @@ export async function GET(req: Request) {
         },
       },
     })
+
     if (!product) {
       return NextResponse.json(
         { message: 'Product not found' },
         { status: 404 }
       )
     }
-    return NextResponse.json(product)
+
+    const [attributes, specifications, gstRows, colorRows, materialRows] =
+      await Promise.all([
+        loadProductAttributes(productId),
+        loadProductSpecifications(productId),
+        prisma.$queryRaw<{ gstNumber: string | null }[]>`
+          SELECT "gstNumber" FROM "SellerProfile" WHERE id = ${product.sellerId} LIMIT 1
+        `,
+        prisma.$queryRaw<
+          { id: string; name: string; hexCode: string | null }[]
+        >`
+          SELECT c.id, c.name, c."hexCode"
+          FROM "ProductOnColor" poc
+          JOIN "ProductColor" c ON c.id = poc."colorId"
+          WHERE poc."productId" = ${productId}
+        `,
+        prisma.$queryRaw<{ id: string; name: string }[]>`
+          SELECT m.id, m.name
+          FROM "ProductOnMaterial" pom
+          JOIN "ProductMaterial" m ON m.id = pom."materialId"
+          WHERE pom."productId" = ${productId}
+        `,
+      ])
+
+    const gstNumber = gstRows[0]?.gstNumber ?? null
+
+    return NextResponse.json({
+      ...product,
+      ...attributes,
+      specifications,
+      colors: colorRows,
+      materials: materialRows,
+      seller: {
+        ...product.seller,
+        gstNumber,
+      },
+    })
   } catch (error) {
     console.log(error)
     return NextResponse.json(

@@ -1,16 +1,14 @@
 'use client'
 
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useMemo, useState } from 'react'
 import { useRouter } from 'next/navigation'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { useSession } from 'next-auth/react'
 import axios from 'axios'
 import { Button } from '@/components/ui/button'
 import { DataTable } from './table'
 import { columns } from './columns'
-import { UserProps } from '@/app/types/type'
-import { useQueryClient } from '@tanstack/react-query'
-
+import { UserProps, ProductDataProps } from '@/app/types/type'
 import { Plus, Search } from 'lucide-react'
 
 const ProductsPage = () => {
@@ -22,7 +20,6 @@ const ProductsPage = () => {
     name: '',
     status: 'all',
   })
-  const [filteredProducts, setFilteredProducts] = useState<any[]>([]) //eslint-disable-line
 
   const { data: user, isLoading: userLoading } = useQuery<UserProps>({
     queryKey: ['user', session?.user?.id],
@@ -35,27 +32,33 @@ const ProductsPage = () => {
 
   const sellerId = user?.sellerProfile?.id
 
-  const { data: productsData = [], isLoading: productsLoading } = useQuery({
+  const { data: productsData, isLoading: productsLoading } = useQuery<ProductDataProps[]>({
     queryKey: ['productSeller', sellerId],
     queryFn: async () =>
       (await axios.get(`/api/seller-products/get?sellerId=${sellerId}`)).data,
     enabled: !!sellerId,
   })
 
-  useEffect(() => {
-    if (productsData.length > 0) {
-      // eslint-disable-next-line
-      const filtered = productsData.filter((product: any) => {
-        const matchesName = filters.name
-          ? product.name?.toLowerCase().includes(filters.name.toLowerCase())
-          : true
-        const matchesStatus =
-          filters.status === 'all' ? true : product.status === filters.status
-        return matchesName && matchesStatus
-      })
-      setFilteredProducts(filtered)
-    }
+  const filteredProducts = useMemo(() => {
+    const list = productsData ?? []
+    return list.filter((product) => {
+      const matchesName = filters.name
+        ? product.name?.toLowerCase().includes(filters.name.toLowerCase())
+        : true
+      const matchesStatus =
+        filters.status === 'all' ? true : product.status === filters.status
+      return matchesName && matchesStatus
+    })
   }, [productsData, filters])
+
+  const refetchProducts = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: ['productSeller', sellerId] })
+  }, [queryClient, sellerId])
+
+  const tableColumns = useMemo(
+    () => columns({ onRefetch: refetchProducts }),
+    [refetchProducts]
+  )
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -70,11 +73,12 @@ const ProductsPage = () => {
     setFilters({ name: '', status: 'all' })
   }
 
-  const refetchProducts = () => {
-    queryClient.invalidateQueries({ queryKey: ['productSeller'] })
-  }
-
-  const statusOptions = ['all', 'approved', 'rejected', 'pending']
+  const statusOptions = [
+    { value: 'all', label: 'All' },
+    { value: 'pending', label: 'Pending Review' },
+    { value: 'approved', label: 'Approved' },
+    { value: 'rejected', label: 'Rejected' },
+  ]
 
   if (userLoading || productsLoading) {
     return (
@@ -88,7 +92,6 @@ const ProductsPage = () => {
 
   return (
     <div className="pb-8">
-      {/* Header Section */}
       <div className="flex flex-col md:flex-row justify-between items-start md:items-center mt-2 mb-6 gap-4">
         <div>
           <h1 className="text-3xl font-bold text-gray-900 tracking-tight">Manage Products</h1>
@@ -103,10 +106,8 @@ const ProductsPage = () => {
         </Button>
       </div>
 
-      {/* Filters Section */}
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-4 mb-6">
         <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-          {/* Search */}
           <div className="relative w-full md:w-96">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
             <input
@@ -119,22 +120,24 @@ const ProductsPage = () => {
             />
           </div>
 
-          {/* Status Filters */}
           <div className="flex flex-wrap gap-2 w-full md:w-auto items-center">
             {statusOptions.map((status) => (
               <button
-                key={status}
-                onClick={() => handleStatusClick(status)}
-                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${filters.status === status
+                key={status.value}
+                type="button"
+                onClick={() => handleStatusClick(status.value)}
+                className={`px-4 py-1.5 rounded-full text-sm font-medium transition-all duration-200 ${
+                  filters.status === status.value
                     ? 'bg-[#006d44] text-white shadow-sm'
                     : 'bg-gray-50 text-gray-600 hover:bg-gray-100 border border-gray-200'
-                  }`}
+                }`}
               >
-                {status.charAt(0).toUpperCase() + status.slice(1)}
+                {status.label}
               </button>
             ))}
             {(filters.name || filters.status !== 'all') && (
               <button
+                type="button"
                 onClick={clearFilters}
                 className="text-sm text-gray-500 hover:text-gray-700 underline underline-offset-2 ml-2"
               >
@@ -147,7 +150,7 @@ const ProductsPage = () => {
 
       <div className="mt-8">
         <DataTable
-          columns={columns({ onRefetch: refetchProducts })}
+          columns={tableColumns}
           data={filteredProducts}
           onRefetch={refetchProducts}
         />

@@ -11,6 +11,12 @@ export const metadata: Metadata = {
   description: 'Your Partner in Business | Marketplace | Supplier',
 }
 
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+}
+
 export default function RootLayout({
   children,
 }: Readonly<{
@@ -20,7 +26,7 @@ export default function RootLayout({
     <SessionWrapper>
       <ReactQueryProvider>
         <html lang="en">
-          <body>
+          <body className="min-h-screen antialiased">
             <Suspense
               fallback={
                 <div className="container mx-auto px-4 py-10">

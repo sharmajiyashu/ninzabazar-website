@@ -1,123 +1,67 @@
-'use client';
+'use client'
 
-import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
-import { Loader2 } from 'lucide-react';
+import React from 'react'
+import CategoryArchItem from './sub-components/category-arch-item'
 
-interface SubCategory {
-  id: string;
-  name: string;
-  imageUrl: string | null;
-  category: {
-    name: string;
-  };
+type CategoryData = {
+  id: string
+  name: string
+  imageUrl?: string | null
 }
 
-const TrendingCategories = () => {
-  const [trending, setTrending] = useState<SubCategory[]>([]);
-  const [loading, setLoading] = useState(true);
+type TrendingCategoriesProps = {
+  title: string
+  subtitle?: string | null
+  categories: CategoryData[]
+}
 
-  useEffect(() => {
-    const fetchTrending = async () => {
-      try {
-        const res = await fetch('/api/categories');
-        const categories = await res.json();
+const sectionTitleClass =
+  "select-none text-[#181A20] text-xl sm:text-2xl md:text-[28px] font-semibold"
 
-        let trendingSubcategories: SubCategory[] = [];
-
-        if (Array.isArray(categories)) {
-          categories.forEach((cat: any) => {
-            if (cat.subCategories && Array.isArray(cat.subCategories)) {
-              cat.subCategories.forEach((sub: any) => {
-                if (sub.isTrending && sub.isActive) {
-                  trendingSubcategories.push({
-                    id: sub.id,
-                    name: sub.name,
-                    imageUrl: sub.imageUrl,
-                    category: { name: cat.name }
-                  });
-                }
-              });
-            }
-          });
-        }
-
-        setTrending(trendingSubcategories);
-      } catch (err) {
-        console.error('Failed to fetch trending categories', err);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchTrending();
-  }, []);
-
-  if (loading) {
-    return (
-      <div className="flex justify-center items-center py-12">
-        <Loader2 className="w-8 h-8 animate-spin text-green-600" />
-      </div>
-    );
-  }
-
-  if (trending.length === 0) {
-    return null; // Don't show the section if no trending items
-  }
+const TrendingCategories = ({ title, subtitle, categories }: TrendingCategoriesProps) => {
+  if (categories.length === 0) return null
 
   return (
-    <div className="py-12 bg-white rounded-3xl p-8 shadow-sm border border-gray-100 my-8">
-      <div className="flex items-center justify-between mb-8">
-        <div>
-          <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
-            Trending Categories
-          </h2>
-          <p className="text-gray-500 mt-2">Discover what's popular right now</p>
-        </div>
+    <section className="w-full font-sans py-2 md:py-4 border-t border-gray-100">
+      <div className="mb-5 md:mb-8">
+        <h2 className={sectionTitleClass} style={{ fontFamily: "'Poppins', sans-serif" }}>
+          {title}
+        </h2>
+        {subtitle && (
+          <p className="text-gray-500 mt-2 text-sm md:text-base">{subtitle}</p>
+        )}
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-6">
-        {trending.map((item) => (
-          <div
-            key={item.id}
-            className="group flex flex-col items-center cursor-pointer transition-all duration-300"
-          >
-            {/* Arch Background Container */}
-            <div className="relative w-28 h-24 md:w-36 md:h-28 mt-6">
-              {/* The Arch Shape */}
-              <div className="absolute inset-0 bg-[#a7ebd1] rounded-t-[100px] shadow-sm"></div>
-
-              {/* The Floating Image */}
-              <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-24 h-28 md:w-32 md:h-36 flex items-end justify-center pb-1">
-                {item.imageUrl ? (
-                  <div className="relative w-full h-full">
-                    <Image
-                      src={item.imageUrl}
-                      alt={item.name}
-                      fill
-                      className="object-contain object-bottom group-hover:-translate-y-2 transition-transform duration-300 drop-shadow-md"
-                    />
-                  </div>
-                ) : (
-                  <div className="w-16 h-16 rounded-full flex items-center justify-center bg-white text-gray-400 font-bold text-xl shadow mb-4">
-                    {item.name.charAt(0)}
-                  </div>
-                )}
-              </div>
-            </div>
-            <div className="mt-3 text-center">
-              <h3 className="font-bold text-gray-900 group-hover:text-green-600 transition-colors line-clamp-1">
-                {item.name}
-              </h3>
-              <p className="text-xs text-gray-500 mt-1 uppercase tracking-wider font-semibold">
-                {item.category.name}
-              </p>
-            </div>
+      {/* Mobile: horizontal scroll */}
+      <div className="flex md:hidden gap-5 overflow-x-auto pb-3 snap-x snap-mandatory no-scrollbar -mx-1 px-1">
+        {categories.map((item, index) => (
+          <div key={item.id} className="shrink-0 w-[42vw] max-w-[160px] snap-start">
+            <CategoryArchItem
+              name={item.name}
+              imageUrl={item.imageUrl}
+              href={`/products?category=${encodeURIComponent(item.name)}`}
+              colorIndex={index}
+              size="lg"
+            />
           </div>
         ))}
       </div>
-    </div>
-  );
-};
 
-export default TrendingCategories;
+      {/* Tablet & desktop: 2 cols on sm, 4 cols on md+ (matches mockup) */}
+      <div className="hidden md:grid grid-cols-2 lg:grid-cols-4 gap-6 lg:gap-10 xl:gap-12">
+        {categories.map((item, index) => (
+          <CategoryArchItem
+            key={item.id}
+            name={item.name}
+            imageUrl={item.imageUrl}
+            href={`/products?category=${encodeURIComponent(item.name)}`}
+            colorIndex={index}
+            size="lg"
+          />
+        ))}
+      </div>
+    </section>
+  )
+}
+
+export default TrendingCategories

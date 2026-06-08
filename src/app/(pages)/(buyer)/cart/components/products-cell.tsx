@@ -1,6 +1,7 @@
 import CurrencyFormatter from '@/app/components/ui-utils/currency-format'
 import useCartStore from '@/app/store/cart-store'
-import { CartItem, ProductVariant } from '@/app/types/type'
+import { formatVariantCombinationLabel, getCartItemUnitPrice } from '@/lib/cart-utils'
+import { CartItem } from '@/app/types/type'
 import { Button } from '@/components/ui/button'
 import {
   Dialog,
@@ -55,18 +56,13 @@ export const ProductCell = ({ product }: { product: CartItem }) => {
 
           <div className="flex-1">
             <div className="font-medium text-sm">{product.name}</div>
-            {product.variantCombination && (
+            {product.variantCombination?.length > 0 && (
               <div className="text-sm text-gray-500 mt-1">
-                {product.variantCombination
-                  .map((variantId: string) => {
-                    const match = productQ?.variants.find(
-                      (variant: ProductVariant) =>
-                        String(variant.id) === String(variantId)
-                    )
-                    return match ? `${match.title}: ${match.option}` : null
-                  })
-                  .filter(Boolean)
-                  .join(', ')}
+                {formatVariantCombinationLabel(
+                  product.variantCombination,
+                  product.variants?.length ? product.variants : productQ?.variants,
+                  productQ?.colors
+                )}
               </div>
             )}
           </div>
@@ -243,9 +239,15 @@ export const TotalPriceCell = ({
     product.variantCombination || []
   )
 
-  // Use store quantity if available, otherwise use the product's quantity
   const quantity = storeQuantity > 0 ? storeQuantity : product.quantity
-  const totalPrice = price * (quantity || 1)
+  const unitPrice = getCartItemUnitPrice({
+    basePrice: Number(product.basePrice),
+    salePrice: product.salePrice,
+    isSale: product.isSale,
+    variants: product.variants,
+    variantCombination: product.variantCombination,
+  })
+  const totalPrice = unitPrice * (quantity || 1)
 
   // Format the total price
   const formattedTotalPrice = <CurrencyFormatter amount={totalPrice} />

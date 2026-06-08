@@ -77,6 +77,21 @@ const MessagesContent: React.FC = () => {
     (conv: Conversation) =>
       conv.id === activeConversation || conv.id === existingConvId
   )
+
+  const sellerProfile = activeConversationData?.seller?.sellerProfile
+  const sellerDisplayName =
+    tempCompanyName && !sellerProfile
+      ? `New chat: ${tempCompanyName}`
+      : sellerProfile?.shopName ||
+        sellerProfile?.companyName ||
+        sellerProfile?.businessRegisteredName ||
+        tempCompanyName ||
+        'Seller'
+  const sellerProfilePicture =
+    activeConversationData?.seller?.profilePicture || '/default-user-img.jpg'
+  const sellerStoreId = sellerProfile?.id
+  const buyerProfilePicture =
+    activeConversationData?.buyer?.profilePicture || '/default-user-img.jpg'
   useEffect(() => {
     if (existingConvId) {
       setActiveConversation(existingConvId)
@@ -100,8 +115,7 @@ const MessagesContent: React.FC = () => {
     }
   }, [messagesData, isTempChat])
 
-  const senderName =
-    activeConversationData?.seller?.sellerProfile?.companyName || 'Seller'
+  const senderName = sellerDisplayName
 
   useEffect(() => {
     const initPushNotifications = async () => {
@@ -543,20 +557,15 @@ const MessagesContent: React.FC = () => {
                 <div className="flex flex-col flex-1 min-w-0">
                   <div className="flex items-center justify-between w-full">
                     <h2 className="text-lg font-medium truncate">
-                      {activeConversationData.seller.sellerProfile.shopName ||
-                        activeConversationData?.seller?.sellerProfile
-                          .companyName ||
-                        activeConversationData?.seller?.sellerProfile
-                          .businessRegisteredName}
-                      {tempCompanyName && `New chat: ${tempCompanyName}`}
+                      {sellerDisplayName}
                     </h2>
-                    <Link
-                      href={`/store/${activeConversationData?.seller?.sellerProfile.id}`}
-                    >
-                      <Button className="text-sm text-green bg-white border hover:text-white hover:bg-green ml-4 flex-shrink-0">
-                        View Store
-                      </Button>
-                    </Link>
+                    {sellerStoreId && (
+                      <Link href={`/store/${sellerStoreId}`}>
+                        <Button className="text-sm text-green bg-white border hover:text-white hover:bg-green ml-4 flex-shrink-0">
+                          View Store
+                        </Button>
+                      </Link>
+                    )}
                   </div>
                   <span className="text-sm text-gray-500 truncate">
                     {tempProductName && `${tempProductName}`}
@@ -576,7 +585,7 @@ const MessagesContent: React.FC = () => {
                     {msg.sender.role === 'SELLER' && (
                       <div className="flex items-center justify-center flex-shrink-0 w-8 h-8 mr-2 overflow-hidden border rounded-full">
                         <Image
-                          src={activeConversationData.seller.profilePicture}
+                          src={sellerProfilePicture}
                           alt="Seller profile picture"
                           width={32}
                           height={32}
@@ -707,15 +716,7 @@ const MessagesContent: React.FC = () => {
             ) : (
               <>
                 <div className="px-6 py-4 bg-white border-b border-gray-200">
-                  <h2 className="text-lg font-medium">
-                    {activeConversationData.seller.sellerProfile.shopName ||
-                      activeConversationData?.seller?.sellerProfile.shopName ||
-                      activeConversationData?.seller?.sellerProfile
-                        .companyName ||
-                      activeConversationData?.seller?.sellerProfile
-                        .businessRegisteredName}
-                    {tempCompanyName && `New chat: ${tempCompanyName}`}
-                  </h2>
+                  <h2 className="text-lg font-medium">{sellerDisplayName}</h2>
                 </div>
                 {/* Chat Field */}
                 <div className="flex-1 p-6 overflow-y-auto bg-white">
@@ -727,7 +728,7 @@ const MessagesContent: React.FC = () => {
                       {msg.sender.role === 'SELLER' && (
                         <div className="items-center justify-center flex-shrink-0 w-10 h-10 mr-3 border rounded-full">
                           <Image
-                            src={activeConversationData.seller.profilePicture}
+                            src={sellerProfilePicture}
                             alt={`Buyers profile picture`}
                             width={100}
                             height={100}
@@ -758,7 +759,7 @@ const MessagesContent: React.FC = () => {
                       {msg.sender.role === 'BUYER' && (
                         <div className="items-center justify-center flex-shrink-0 w-10 h-10 ml-3 border rounded-full">
                           <Image
-                            src={activeConversationData.buyer.profilePicture}
+                            src={buyerProfilePicture}
                             alt={`Buyer profile picture`}
                             width={100}
                             height={100}
@@ -827,24 +828,19 @@ const MessagesContent: React.FC = () => {
                       className="rounded-full"
                     />
                   </div>
-                  <h3 className="text-lg font-bold">
-                    {activeConversationData?.seller?.sellerProfile
-                      .companyName ||
-                      activeConversationData.seller.sellerProfile.shopName ||
-                      activeConversationData.seller.sellerProfile
-                        .businessRegisteredName}
-                  </h3>
-                  <Link
-                    href={`/store/${activeConversationData?.seller?.sellerProfile.id}`}
-                    className="text-sm text-green hover:underline"
-                  >
-                    View Shop
-                  </Link>
+                  <h3 className="text-lg font-bold">{sellerDisplayName}</h3>
+                  {sellerStoreId && (
+                    <Link
+                      href={`/store/${sellerStoreId}`}
+                      className="text-sm text-green hover:underline"
+                    >
+                      View Shop
+                    </Link>
+                  )}
                   <div className="w-full mt-6 space-y-4">
                     <div className="flex items-center">
                       <span className="text-xs font-medium">
-                        {activeConversationData?.seller.sellerProfile
-                          .isVerified ? (
+                        {sellerProfile?.isVerified ? (
                           <div className="flex items-center gap-x-1">
                             <BadgeCheck className="w-5 h-5 text-white fill-green" />
                             Verified Seller
@@ -858,7 +854,9 @@ const MessagesContent: React.FC = () => {
                       </span>
                       <span className="ml-auto text-xs">
                         Joined:{' '}
-                        {activeConversationData?.seller.sellerProfile.createdAt}
+                        {sellerProfile?.createdAt
+                          ? new Date(sellerProfile.createdAt).toLocaleDateString()
+                          : '—'}
                       </span>
                     </div>
 
@@ -867,18 +865,11 @@ const MessagesContent: React.FC = () => {
                         📦
                       </div>
                       <span className="text-xs">
-                        Products:{' '}
-                        {
-                          activeConversationData?.seller.sellerProfile.products
-                            .length
-                        }
+                        Products: {sellerProfile?.products?.length ?? 0}
                       </span>
                       <span className="ml-auto text-xs">
                         Rating:{' '}
-                        {
-                          activeConversationData?.seller.sellerProfile
-                            .storeRatingSummary.average
-                        }
+                        {sellerProfile?.storeRatingSummary?.average ?? '—'}
                       </span>
                     </div>
                   </div>

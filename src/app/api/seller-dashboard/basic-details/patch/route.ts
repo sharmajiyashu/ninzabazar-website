@@ -30,6 +30,13 @@ export async function PATCH(req: Request) {
       mappedData.description = fieldsToUpdate.shop_description
     }
 
+    const gstNumber = fieldsToUpdate.gst_number || fieldsToUpdate.gstNumber
+    if (gstNumber !== undefined) {
+      await prisma.$executeRaw`
+        UPDATE "SellerProfile" SET "gstNumber" = ${String(gstNumber)}, "updatedAt" = NOW() WHERE id = ${id}
+      `
+    }
+
     if (fieldsToUpdate.business_category) {
       mappedData.businessType = fieldsToUpdate.business_category
     }

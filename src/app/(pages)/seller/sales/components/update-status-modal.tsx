@@ -9,8 +9,8 @@ import {
 } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { Button } from '@/components/ui/button'
-import axios from 'axios'
-import { Order } from '@/app/types/type'
+import { ORDER_STATUSES } from '@/lib/order-status'
+import { toast } from 'sonner'
 
 export default function UpdateStatusModal({
   open,
@@ -30,10 +30,11 @@ export default function UpdateStatusModal({
 
       await axios.put('/api/seller-order/put-tracking-link', {
         orderId: order.id,
-        status: 'shipped',
+        status: ORDER_STATUSES.SHIPPED,
         trackingLink,
       })
 
+      toast.success('Order marked as shipped')
       onOpenChange(false)
     } catch (err) {
       console.error('Failed to update status:', err)

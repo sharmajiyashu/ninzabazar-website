@@ -9,6 +9,7 @@ import axios from 'axios'
 import { formatPhoneNumber } from '@/lib/phoneNumFormatter'
 import useCartStore from '@/app/store/cart-store'
 import CurrencyFormatter from '@/app/components/ui-utils/currency-format'
+import { formatVariantCombinationLabel, getCartItemUnitPrice } from '@/lib/cart-utils'
 import Image from 'next/image'
 import razorPay from '../../../../../public/razor-pay.png'
 import paypal from '../../../../../public/paypal.png'
@@ -20,6 +21,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useRouter } from 'next/navigation'
+import { toast } from 'sonner'
 
 declare global {
   interface Window {
@@ -153,8 +155,13 @@ const CheckoutPage = () => {
 
   const cartTotals = useMemo(() => {
     const subtotal = cart.reduce((sum: number, item: CartItem) => {
-      const price =
-        item.isSale && item.salePrice ? item.salePrice : item.basePrice
+      const price = getCartItemUnitPrice({
+        basePrice: Number(item.basePrice),
+        salePrice: item.salePrice,
+        isSale: item.isSale,
+        variants: item.variants,
+        variantCombination: item.variantCombination,
+      })
       return sum + price * item.quantity
     }, 0)
 
@@ -205,23 +212,31 @@ const CheckoutPage = () => {
         (addr: { isDefault: boolean }) => addr.isDefault
       )
 
-      const orderItems = cart.map((item) => ({
-        id: item.id,
-        sellerId: item.product?.seller?.id || '',
-        quantity: item.quantity,
-        priceAtPurchase:
-          item.isSale && item.salePrice ? item.salePrice : item.basePrice,
-        variantId:
-          item.variantCombination.length > 0
-            ? item.variantCombination[0]
-            : undefined,
-        productName: item.name,
-        variantCombination: item.variantCombination,
-        productId: item.productId || item.id,
-        shippingMethodName: selectedShippingMethods[item.name || '']?.name,
-        shippingMethodPrice:
-          selectedShippingMethods[item.name || '']?.price || 0,
-      }))
+      const orderItems = cart.map((item) => {
+        const cartItemId = item.id || ''
+        const shipping = selectedShippingMethods[cartItemId]
+        const unitPrice = getCartItemUnitPrice({
+          basePrice: Number(item.basePrice),
+          salePrice: item.salePrice,
+          isSale: item.isSale,
+          variants: item.variants,
+          variantCombination: item.variantCombination,
+        })
+
+        return {
+          id: cartItemId,
+          sellerId: item.sellerId || item.seller?.id || item.product?.seller?.id || '',
+          quantity: item.quantity,
+          priceAtPurchase: unitPrice,
+          variantId:
+            item.variantCombination?.find((v) => !v.startsWith('color:')) || item.variantId,
+          productName: item.name,
+          variantCombination: item.variantCombination || [],
+          productId: item.productId,
+          shippingMethodName: shipping?.name,
+          shippingMethodPrice: shipping?.price || 0,
+        }
+      })
 
       const orderData = {
         userId: user?.buyerProfile?.id,
@@ -238,16 +253,19 @@ const CheckoutPage = () => {
       if (orderRes.data.success) {
         await clearCart(user?.buyerProfile?.id || '')
         cartStore.clearBuyNowItem()
+        cartStore.clearShippingMethods()
         sessionStorage.removeItem('checkoutItems')
         sessionStorage.removeItem('checkoutType')
-        localStorage.setItem('orderId', response.razorpay_order_id)
+        localStorage.setItem('orderId', orderRes.data.orderId || response.razorpay_order_id)
         router.push('/success')
       } else {
         throw new Error(orderRes.data.error || 'Failed to create order')
       }
       // eslint-disable-next-line
     } catch (err: any) {
-      setPaymentError(err.message || 'Order failed')
+      const msg = err.message || 'Order failed'
+      setPaymentError(msg)
+      toast.error(msg)
     } finally {
       setIsProcessingPayment(false)
     }
@@ -464,13 +482,24 @@ const CheckoutPage = () => {
                         <h4 className="font-medium text-gray-900">
                           {item?.name || 'Product Name'}
                         </h4>
+                        {item.variantCombination?.length > 0 && (
+                          <p className="text-sm text-gray-500">
+                            {formatVariantCombinationLabel(
+                              item.variantCombination,
+                              item.variants || item.product?.variants,
+                              item.product?.colors
+                            )}
+                          </p>
+                        )}
                         <p className="text-orange-600 font-semibold">
                           <CurrencyFormatter
-                            amount={Number(
-                              item.isSale && item.salePrice
-                                ? item.salePrice
-                                : item.basePrice
-                            )}
+                            amount={getCartItemUnitPrice({
+                              basePrice: Number(item.basePrice),
+                              salePrice: item.salePrice,
+                              isSale: item.isSale,
+                              variants: item.variants,
+                              variantCombination: item.variantCombination,
+                            })}
                           />{' '}
                           x {item.quantity}
                         </p>

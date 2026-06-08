@@ -14,33 +14,68 @@ import { signOut, useSession } from 'next-auth/react'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
+  const [isMobile, setIsMobile] = useState(false)
   const pathname = usePathname()
   const { data: session } = useSession()
 
   const mainRef = React.useRef<HTMLElement>(null)
 
   useEffect(() => {
+    const updateLayout = () => {
+      const mobile = window.innerWidth < 1024
+      setIsMobile(mobile)
+      if (mobile) {
+        setSidebarOpen(false)
+      }
+    }
+
+    updateLayout()
+    window.addEventListener('resize', updateLayout)
+    return () => window.removeEventListener('resize', updateLayout)
+  }, [])
+
+  useEffect(() => {
     mainRef.current?.scrollTo({ top: 0 })
-  }, [pathname])
+    if (isMobile) {
+      setSidebarOpen(false)
+    }
+  }, [pathname, isMobile])
 
   const displayName = session?.user?.name || session?.user?.email || '—'
   const displayRole = session?.user?.role || 'Seller'
 
   return (
-    <div className="seller-theme flex fixed inset-0 overflow-hidden bg-background">
+    <div className="seller-theme fixed inset-0 flex overflow-hidden bg-background">
+      {isMobile && sidebarOpen && (
+        <button
+          type="button"
+          aria-label="Close sidebar"
+          className="fixed inset-0 z-40 bg-black/40 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
       <aside
-        className={`shrink-0 overflow-hidden transition-[width] duration-500 ease-out ${sidebarOpen ? 'w-64' : 'w-0'
-          }`}
+        className={`shrink-0 transition-all duration-300 ease-out ${
+          isMobile
+            ? `fixed inset-y-0 left-0 z-50 w-64 transform ${
+                sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+              }`
+            : sidebarOpen
+              ? 'relative w-64'
+              : 'relative w-0 overflow-hidden'
+        }`}
       >
         <div className="flex h-full w-64 flex-col border-r border-sidebar-border bg-sidebar">
           <DashboardSidebar />
         </div>
       </aside>
+
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
         <header className="sticky top-0 z-10 flex h-14 shrink-0 items-center gap-3 border-b border-border bg-card px-4 shadow-sm sm:px-6">
           <button
             type="button"
-            onClick={() => setSidebarOpen((o: boolean) => !o)}
+            onClick={() => setSidebarOpen((o) => !o)}
             className="flex h-9 w-9 cursor-pointer items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2"
             aria-label={sidebarOpen ? 'Hide Sidebar' : 'Show Sidebar'}
           >
@@ -66,7 +101,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
               </DropdownMenu.Trigger>
               <DropdownMenu.Portal>
                 <DropdownMenu.Content
-                  className="min-w-[180px] rounded-lg border border-border bg-background p-1 shadow-lg z-50"
+                  className="z-50 min-w-[180px] rounded-lg border border-border bg-background p-1 shadow-lg"
                   sideOffset={6}
                   align="end"
                 >
@@ -93,12 +128,12 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
         </header>
         <main
           ref={mainRef}
-          className="min-h-0 flex-1 overflow-auto p-6"
+          className="min-h-0 flex-1 overflow-auto px-4 py-4 sm:p-6"
           id="main-content"
         >
           <div
             key={pathname}
-            className="mx-auto max-w-7xl w-full animate-in fade-in duration-200"
+            className="mx-auto w-full max-w-7xl animate-in fade-in duration-200"
           >
             {children}
           </div>
@@ -108,9 +143,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           role="contentinfo"
         >
           <div className="mx-auto flex max-w-7xl flex-wrap items-center justify-between gap-2 text-xs text-muted-foreground">
-            <span>
-              © {new Date().getFullYear()} Ninja Bazaar
-            </span>
+            <span>© {new Date().getFullYear()} Ninja Bazaar</span>
           </div>
         </footer>
       </div>

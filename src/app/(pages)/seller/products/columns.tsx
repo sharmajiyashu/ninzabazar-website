@@ -4,11 +4,11 @@ import { ColumnDef } from '@tanstack/react-table'
 import { Checkbox } from '@/components/ui/checkbox'
 import {
   ActionsCell,
-  ActiveCell,
   CategoryCell,
   LastUpdatedCell,
   ProductCell,
   StatusCell,
+  VisibilityCell,
 } from './components/products-cell'
 import { ProductDataProps } from '@/app/types/type'
 export const columns = ({
@@ -46,7 +46,12 @@ export const columns = ({
   {
     accessorKey: 'category',
     header: 'Category',
-    cell: ({ row }) => <CategoryCell category={row.original.category} />,
+    cell: ({ row }) => (
+      <CategoryCell
+        category={row.original.category}
+        subCategory={row.original.subCategory}
+      />
+    ),
   },
   {
     accessorKey: 'updatedAt',
@@ -55,13 +60,15 @@ export const columns = ({
   },
   {
     accessorKey: 'status',
-    header: 'Status',
+    header: 'Review Status',
     cell: ({ row }) => <StatusCell product={row.original} />,
   },
   {
     accessorKey: 'isActive',
-    header: 'Visibility',
-    cell: ({ row }) => <ActiveCell product={row.original} />,
+    header: 'Listing',
+    cell: ({ row }) => (
+      <VisibilityCell product={row.original} onRefetch={onRefetch} />
+    ),
   },
   {
     id: 'actions',

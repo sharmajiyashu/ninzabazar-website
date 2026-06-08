@@ -1,29 +1,22 @@
 import prisma from '@/lib/prisma'
+import { liveProductWhere } from '@/lib/product-status'
 import { NextResponse } from 'next/server'
 
 export async function GET(req: Request) {
   try {
     const { searchParams } = new URL(req.url)
     const limit = parseInt(searchParams.get('limit') || '12')
-
-    // Method 1: Random ID Selection (Most Efficient)
-    const minMax = await prisma.product.aggregate({
-      _min: { id: true },
-      _max: { id: true },
-      where: {
-        isActive: true, // Only fetch active products
-      },
-    })
-
-    if (!minMax._min.id || !minMax._max.id) {
-      return NextResponse.json([])
-    }
+    const liveWhere = liveProductWhere()
 
     const existingProducts = await prisma.product.findMany({
-      where: { isActive: true },
+      where: liveWhere,
       select: { id: true },
-      take: 100, // Get a pool to randomize from
+      take: 100,
     })
+
+    if (existingProducts.length === 0) {
+      return NextResponse.json([])
+    }
 
     const shuffled = existingProducts
       .sort(() => 0.5 - Math.random())
@@ -33,8 +26,7 @@ export async function GET(req: Request) {
     const products = await prisma.product.findMany({
       where: {
         id: { in: shuffled },
-        isActive: true,
-        status: 'approved',
+        ...liveWhere,
       },
       include: {
         images: {

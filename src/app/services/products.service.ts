@@ -1,4 +1,5 @@
 import prisma from '@/lib/prisma'
+import { liveProductWhere } from '@/lib/product-status'
 
 export async function fetchSearchProducts(q: string) {
   if (!q || q.trim() === '') {
@@ -11,28 +12,28 @@ export async function fetchSearchProducts(q: string) {
     // Search for actual products, not just keywords
     const products = await prisma.product.findMany({
       where: {
-        status: 'approved',
-        isActive: true,
-        OR: [
-          // Search in keywords array
+        AND: [
+          liveProductWhere(),
           {
-            keywords: {
-              has: lowercaseQuery,
-            },
-          },
-          // Search in product name
-          {
-            name: {
-              contains: lowercaseQuery,
-              mode: 'insensitive',
-            },
-          },
-          // Search in description
-          {
-            description: {
-              contains: lowercaseQuery,
-              mode: 'insensitive',
-            },
+            OR: [
+              {
+                keywords: {
+                  has: lowercaseQuery,
+                },
+              },
+              {
+                name: {
+                  contains: lowercaseQuery,
+                  mode: 'insensitive',
+                },
+              },
+              {
+                description: {
+                  contains: lowercaseQuery,
+                  mode: 'insensitive',
+                },
+              },
+            ],
           },
         ],
       },
@@ -93,11 +94,10 @@ export async function fetchSearchProducts(q: string) {
 }
 
 export async function fetchProductsID(productID: string) {
-  return await prisma.product.findUnique({
+  return await prisma.product.findFirst({
     where: {
       id: productID,
-      status: 'approved',
-      isActive: true,
+      ...liveProductWhere(),
     },
   })
 }
@@ -106,28 +106,28 @@ export async function fetchQueryProducts(query: string) {
   const lowercaseQuery = query.toLowerCase().trim()
   return await prisma.product.findMany({
     where: {
-      status: 'approved',
-      isActive: true,
-      OR: [
-        // If keywords is a single string field
+      AND: [
+        liveProductWhere(),
         {
-          keywords: {
-            has: lowercaseQuery,
-          },
-        },
-        // Also search in name for better results
-        {
-          name: {
-            contains: lowercaseQuery,
-            mode: 'insensitive',
-          },
-        },
-        // Optionally search in description too
-        {
-          description: {
-            contains: lowercaseQuery,
-            mode: 'insensitive',
-          },
+          OR: [
+            {
+              keywords: {
+                has: lowercaseQuery,
+              },
+            },
+            {
+              name: {
+                contains: lowercaseQuery,
+                mode: 'insensitive',
+              },
+            },
+            {
+              description: {
+                contains: lowercaseQuery,
+                mode: 'insensitive',
+              },
+            },
+          ],
         },
       ],
     },
@@ -147,36 +147,141 @@ export async function fetchQueryProducts(query: string) {
   })
 }
 
-export async function fetchCategoryProducts(category: string, subCategory?: string | null) {
-  return await prisma.product.findMany({
-    where: {
-      category: category,
-      ...(subCategory && { subCategory: subCategory }),
-      status: 'approved',
-      isActive: true,
+const productListInclude = {
+  images: {
+    select: {
+      urlpath: true,
+      isDefault: true,
     },
-    include: {
-      images: {
-        select: {
-          urlpath: true,
-          isDefault: true,
-        },
-      },
-      reviews: {
-        select: {
-          rating: true,
-        },
-      },
+  },
+  reviews: {
+    select: {
+      rating: true,
     },
+  },
+  variants: { select: { price: true, hasPrice: true } },
+  category: { select: { id: true, name: true } },
+  subCategory: { select: { id: true, name: true } },
+} as const
+
+const productListIncludeWithAttributes = {
+  ...productListInclude,
+  productColors: { include: { color: { select: { id: true, name: true, hexCode: true } } } },
+  productMaterials: { include: { material: { select: { id: true, name: true } } } },
+} as const
+
+function normalizeName(name?: string | null) {
+  return name?.trim().replace(/\+/g, ' ') || ''
+}
+
+function buildAttributeFilters(filters?: {
+  colorIds?: string[]
+  materialIds?: string[]
+  minOrder?: number | null
+}) {
+  return {
+    ...(filters?.minOrder && { minOrderQuantity: { lte: filters.minOrder } }),
+    ...(filters?.colorIds?.length && {
+      productColors: { some: { colorId: { in: filters.colorIds } } },
+    }),
+    ...(filters?.materialIds?.length && {
+      productMaterials: { some: { materialId: { in: filters.materialIds } } },
+    }),
+  }
+}
+
+function buildSubCategoryFilter(subCategory?: string, subCategoryNames?: string[]) {
+  const names = subCategoryNames?.map(normalizeName).filter(Boolean) || []
+  const single = normalizeName(subCategory)
+  if (names.length > 0) {
+    return { subCategory: { name: { in: names, mode: 'insensitive' as const } } }
+  }
+  if (single) {
+    return { subCategory: { name: { equals: single, mode: 'insensitive' as const } } }
+  }
+  return {}
+}
+
+function hasAttributeRelations() {
+  return typeof (prisma as { brand?: { findMany?: unknown } }).brand?.findMany === 'function'
+}
+
+async function findProductsWithListInclude(where: object) {
+  try {
+    return await prisma.product.findMany({
+      where,
+      include: hasAttributeRelations() ? productListIncludeWithAttributes : productListInclude,
+    })
+  } catch {
+    return await prisma.product.findMany({ where, include: productListInclude })
+  }
+}
+
+export async function fetchCategoryProducts(
+  category: string,
+  subCategory?: string | null,
+  filters?: {
+    subCategoryNames?: string[];
+    colorIds?: string[];
+    materialIds?: string[];
+    minOrder?: number | null;
+  }
+) {
+  const cat = normalizeName(category)
+  return findProductsWithListInclude({
+    category: { name: { equals: cat, mode: 'insensitive' } },
+    ...buildSubCategoryFilter(subCategory || undefined, filters?.subCategoryNames),
+    ...liveProductWhere(),
+    ...buildAttributeFilters(filters),
   })
+}
+
+export async function fetchFilteredProducts(params: {
+  query?: string;
+  category?: string;
+  subCategory?: string;
+  subCategoryNames?: string[];
+  colorIds?: string[];
+  materialIds?: string[];
+  minOrder?: number | null;
+}) {
+  const { query, category, subCategory, subCategoryNames, colorIds, materialIds, minOrder } = params;
+
+  const filterWhere = {
+    ...liveProductWhere(),
+    ...buildAttributeFilters({ colorIds, materialIds, minOrder }),
+  };
+
+  const cat = normalizeName(category)
+
+  if (cat) {
+    return findProductsWithListInclude({
+      category: { name: { equals: cat, mode: 'insensitive' } },
+      ...buildSubCategoryFilter(subCategory, subCategoryNames),
+      ...filterWhere,
+    });
+  }
+
+  if (query) {
+    const lowercaseQuery = query.toLowerCase().trim();
+    return findProductsWithListInclude({
+      ...filterWhere,
+      OR: [
+        { keywords: { has: lowercaseQuery } },
+        { name: { contains: lowercaseQuery, mode: 'insensitive' } },
+        { description: { contains: lowercaseQuery, mode: 'insensitive' } },
+      ],
+    });
+  }
+
+  return findProductsWithListInclude(filterWhere);
 }
 
 export async function fetchSellerProducts(sellerId: string) {
   return await prisma.product.findMany({
     where: {
       sellerId: sellerId,
-      status: 'approved',
-      isActive: true,
+      ...liveProductWhere(),
     },
     include: {
       images: {

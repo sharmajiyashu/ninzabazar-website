@@ -15,6 +15,7 @@ import {
 import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
+import { formatVariantCombinationLabel, getCartItemUnitPrice } from '@/lib/cart-utils'
 import { CartItem, UserProps } from '@/app/types/type'
 import { ShoppingCart, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'
@@ -49,8 +50,13 @@ export default function CartPage() {
   // Calculate cart totals
   const cartTotals = useMemo(() => {
     const subtotal = cart.reduce((sum: number, item: CartItem) => {
-      const price =
-        item.isSale && item.salePrice ? item.salePrice : item.basePrice
+      const price = getCartItemUnitPrice({
+        basePrice: Number(item.basePrice),
+        salePrice: item.salePrice,
+        isSale: item.isSale,
+        variants: item.variants,
+        variantCombination: item.variantCombination,
+      })
       return sum + price * item.quantity
     }, 0)
 
@@ -98,7 +104,8 @@ export default function CartPage() {
     }
 
     try {
-      // Redirect to checkout page
+      sessionStorage.setItem('checkoutType', 'cart')
+      sessionStorage.removeItem('checkoutItems')
       router.push('/checkout')
     } catch (error) {
       console.log(error)
@@ -150,7 +157,7 @@ export default function CartPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-10 max-w-7xl">
+    <div className="page-container animate-fade-up">
       {/* Header */}
       <div className="flex items-center gap-3 mb-8">
         <ShoppingCart className="h-8 w-8 text-green" />
