@@ -26,7 +26,7 @@ export default function RootLayout({
     <SessionWrapper>
       <ReactQueryProvider>
         <html lang="en">
-          <body className="min-h-screen antialiased">
+          <body className="min-h-screen antialiased" suppressHydrationWarning>
             <Suspense
               fallback={
                 <div className="container mx-auto px-4 py-10">

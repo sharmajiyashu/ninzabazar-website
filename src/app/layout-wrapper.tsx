@@ -8,59 +8,41 @@ import { useSession } from 'next-auth/react'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
 
+const AUTH_ROUTES = ['/login', '/signup', '/seller/login', '/seller/signup']
+
+function isSellerRoute(pathname: string) {
+  return pathname.startsWith('/seller') && !AUTH_ROUTES.includes(pathname)
+}
+
 const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
-  const { data: session, status } = useSession()
+  const { data: session } = useSession()
   const pathname = usePathname()
 
-  const noHeaderFooterRoutes = [
-    '/login',
-    '/signup',
-    '/seller/login',
-    '/seller/signup',
-  ]
-  const isAuthRoute = noHeaderFooterRoutes.includes(pathname)
+  const withDates = (content: React.ReactNode) => (
+    <LocalizationProvider dateAdapter={AdapterDayjs}>{content}</LocalizationProvider>
+  )
 
-  if (isAuthRoute) {
-    return (
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
-        {children}
-      </LocalizationProvider>
-    )
+  if (AUTH_ROUTES.includes(pathname)) {
+    return withDates(children)
   }
 
-  if (status === 'loading' || !session) {
-    return (
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <div className="flex min-h-screen min-w-0 flex-col">
-          <NavBar />
-          <main className="min-w-0 flex-1 animate-fade-in-soft">{children}</main>
-          <Footer />
-        </div>
-      </LocalizationProvider>
-    )
+  if (isSellerRoute(pathname)) {
+    return withDates(<DashboardShell>{children}</DashboardShell>)
   }
 
   const userRole = session?.user?.role
   const isPublicHome = pathname === '/'
 
   if (userRole === 'SELLER' && !isPublicHome) {
-    return (
-      <DashboardShell>
-        <LocalizationProvider dateAdapter={AdapterDayjs}>
-          {children}
-        </LocalizationProvider>
-      </DashboardShell>
-    )
+    return withDates(<DashboardShell>{children}</DashboardShell>)
   }
 
-  return (
-    <LocalizationProvider dateAdapter={AdapterDayjs}>
-      <div className="flex min-h-screen min-w-0 flex-col">
-        <NavBar />
-        <main className="min-w-0 flex-1 animate-fade-in-soft">{children}</main>
-        <Footer />
-      </div>
-    </LocalizationProvider>
+  return withDates(
+    <div className="flex min-h-screen min-w-0 flex-col">
+      <NavBar />
+      <main className="min-w-0 flex-1 animate-fade-in-soft">{children}</main>
+      <Footer />
+    </div>
   )
 }
 

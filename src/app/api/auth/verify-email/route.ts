@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server'
 import prisma from '@/lib/prisma'
+import { redirectTo } from '@/lib/app-url'
 
 export async function GET(request: NextRequest) {
   try {
@@ -9,7 +10,7 @@ export async function GET(request: NextRequest) {
 
     if (!token || !email) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL}/verification-failed?error=missing_params`
+        redirectTo('/verification-failed?error=missing_params', request)
       )
     }
 
@@ -23,14 +24,14 @@ export async function GET(request: NextRequest) {
     // Check if token exists and is valid
     if (!verificationToken || verificationToken.identifier !== email) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL}/verification-failed?error=invalid_token`
+        redirectTo('/verification-failed?error=invalid_token', request)
       )
     }
 
     // Check if token is expired
     if (verificationToken.expires < new Date()) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL}/verification-failed?error=token_expired`
+        redirectTo('/verification-failed?error=token_expired', request)
       )
     }
 
@@ -42,7 +43,7 @@ export async function GET(request: NextRequest) {
 
     if (!user) {
       return NextResponse.redirect(
-        `${process.env.NEXTAUTH_URL}/verification-failed?error=user_not_found`
+        redirectTo('/verification-failed?error=user_not_found', request)
       )
     }
 
@@ -59,12 +60,12 @@ export async function GET(request: NextRequest) {
 
     // Redirect to verification success page with a flag to refresh the session
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL}/verification-success?refresh=true`
+      redirectTo('/verification-success?refresh=true', request)
     )
   } catch (error) {
     console.error('Email verification error:', error)
     return NextResponse.redirect(
-      `${process.env.NEXTAUTH_URL}/verification-failed?error=server_error`
+      redirectTo('/verification-failed?error=server_error', request)
     )
   }
 }

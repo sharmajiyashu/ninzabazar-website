@@ -4,6 +4,7 @@ import crypto from 'crypto'
 import nodemailer from 'nodemailer'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
+import { absoluteUrl } from '@/lib/app-url'
 
 export async function POST(request: Request) {
     try {
@@ -50,7 +51,10 @@ export async function POST(request: Request) {
             },
         })
 
-        const verificationUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`
+        const verificationUrl = absoluteUrl(
+            `/api/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`,
+            request
+        )
 
         // Send verification email
         const transporter = nodemailer.createTransport({

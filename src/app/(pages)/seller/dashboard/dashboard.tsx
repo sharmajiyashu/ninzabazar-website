@@ -1,11 +1,12 @@
 'use client'
-import React, { useState, useRef } from 'react'
+import React, { useState, useRef, useEffect } from 'react'
 import Image from 'next/image'
 import { SquarePen } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { useSession } from 'next-auth/react'
+import { useRouter } from 'next/navigation'
 import { UserProps } from '@/app/types/type'
 import { formatPhoneNumber } from '@/lib/phoneNumFormatter'
 import CompanyDetails from './company-details'
@@ -20,6 +21,7 @@ const Dashboard = () => {
 
   const fileInputRef = useRef<HTMLInputElement>(null)
   const queryClient = useQueryClient()
+  const router = useRouter()
   const { data: session } = useSession()
 
   const { data: user } = useQuery<UserProps>({
@@ -29,6 +31,14 @@ const Dashboard = () => {
       return res.data
     },
   })
+
+  useEffect(() => {
+    if (!user) return
+    const profile = user.sellerProfile
+    if (!profile || profile.isVerified === false || profile.isVerified === null) {
+      router.replace('/seller/registration')
+    }
+  }, [user, router])
 
   // Handle file selection
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {

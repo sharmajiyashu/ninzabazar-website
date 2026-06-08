@@ -49,42 +49,26 @@ const LoginForms = () => {
   })
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
-    try {
-      setIsLoading(true)
-      const response = await signIn('credentials', {
-        redirect: false,
-        email: values.email,
-        password: values.password,
-        role: 'SELLER',
+    setIsLoading(true)
+
+    const response = await signIn('credentials', {
+      redirect: false,
+      email: values.email,
+      password: values.password,
+      role: 'SELLER',
+      callbackUrl: '/seller/dashboard',
+    })
+
+    if (!response?.ok) {
+      toast.error(response?.error ?? 'Incorrect username or password', {
+        className: 'm-6',
       })
-
-      if (!response?.ok) {
-        setIsLoading(false)
-        toast.error('Incorrect username or password', {
-          className: 'm-6',
-        })
-        throw new Error('Failed to sign in')
-      }
-      toast.success('Login successful!', { className: 'm-6' })
-
-      const userResponse = await fetch('/api/auth/seller/profile')
-      const userData = await userResponse.json()
-      console.log(userData)
-      if (
-        userData.sellerProfile.isVerified === false ||
-        userData.sellerProfile.isVerified === null
-      ) {
-        router.push('/seller/registration')
-      } else {
-        toast.success('Welcome to Ninja Bazaar!', { className: 'm-6' })
-        router.push('/seller/dashboard')
-      }
-
       setIsLoading(false)
-    } catch (error) {
-      console.log(error)
-      setIsLoading(false)
+      return
     }
+
+    toast.success('Login successful!', { className: 'm-6' })
+    window.location.href = response.url ?? '/seller/dashboard'
   }
 
   const handleSendOtp = async (e: React.FormEvent) => {

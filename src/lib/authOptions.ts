@@ -3,6 +3,9 @@ import GoogleProvider from 'next-auth/providers/google'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import prisma from './prisma'
 import { comparePassword } from './hashPassword'
+import { initAuthUrl, useSecureAuthCookies } from './app-url'
+
+initAuthUrl()
 
 interface CustomUser extends User {
   id: string
@@ -58,14 +61,16 @@ export const authOptions: NextAuthOptions = {
           },
         })
 
-        if (user?.role !== credentials.role) {
+        if (!user) {
+          throw new Error('User not found')
+        }
+
+        if (user.role !== credentials.role) {
           throw new Error(
             `Invalid account type. Please use the ${credentials.role} login page.`
           )
         }
-        if (!user) {
-          throw new Error('User not found')
-        }
+
         if (!user.password) {
           throw new Error('User password is missing')
         }
@@ -94,6 +99,7 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days validity for session
   },
+  useSecureCookies: useSecureAuthCookies(),
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: '/login',
@@ -263,12 +269,20 @@ export const authOptions: NextAuthOptions = {
                   emailVerified: true,
                 },
               },
+              sellerProfile: {
+                select: {
+                  storeStatus: true,
+                },
+              },
             },
           })
 
           if (updatedUser) {
             token.emailVerified =
               updatedUser.buyerProfile?.emailVerified ?? false
+            if (updatedUser.role === 'SELLER') {
+              token.storeStatus = updatedUser.sellerProfile?.storeStatus ?? null
+            }
             console.log(
               '✅ Token updated - emailVerified:',
               token.emailVerified

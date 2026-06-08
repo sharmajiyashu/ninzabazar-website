@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { hashPassword } from '@/lib/hashPassword'
 import nodemailer from 'nodemailer'
 import prisma from '@/lib/prisma'
+import { absoluteUrl } from '@/lib/app-url'
 
 export async function POST(request: Request) {
     try {
@@ -65,6 +66,8 @@ export async function POST(request: Request) {
                 pass: process.env.EMAIL_SERVER_PASSWORD,
             },
         })
+
+        const registrationUrl = absoluteUrl('/seller/registration', request)
 
         const mailOptions = {
             from: process.env.EMAIL_FROM,
@@ -365,7 +368,7 @@ export async function POST(request: Request) {
                           </div>
                           
                           <div class="cta-section">
-                              <a href="${process.env.NEXTAUTH_URL}/seller/registration" class="cta-button">
+                              <a href="${registrationUrl}" class="cta-button">
                                   Verify Your Store
                               </a>
                           </div>
@@ -407,7 +410,7 @@ export async function POST(request: Request) {
         if (process.env.EMAIL_SERVER_HOST === 'smtp.example.com') {
             console.log('\n=== MOCK EMAIL SENT ===')
             console.log(`To: ${email}`)
-            console.log(`Verification URL: ${process.env.NEXTAUTH_URL}/seller/registration`)
+            console.log(`Verification URL: ${registrationUrl}`)
             console.log('=======================\n')
         } else {
             await transporter.sendMail(mailOptions)

@@ -3,6 +3,7 @@ import { hashPassword } from '@/lib/hashPassword'
 import nodemailer from 'nodemailer'
 import prisma from '@/lib/prisma'
 import crypto from 'crypto'
+import { absoluteUrl } from '@/lib/app-url'
 
 export async function POST(request: Request) {
   try {
@@ -66,7 +67,10 @@ export async function POST(request: Request) {
       },
     })
 
-    const verificationUrl = `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`
+    const verificationUrl = absoluteUrl(
+      `/api/auth/verify-email?token=${verificationToken}&email=${encodeURIComponent(email)}`,
+      request
+    )
 
     // Send confirmation email to the user
     const transporter = nodemailer.createTransport({
@@ -441,8 +445,8 @@ export async function POST(request: Request) {
                             </p>
                             
                             <div class="footer-links">
-                                <a href="${process.env.NEXTAUTH_URL}/privacy" class="footer-link">Privacy Policy</a>
-                                <a href="${process.env.NEXTAUTH_URL}/terms" class="footer-link">Terms of Service</a>
+                                <a href="${absoluteUrl('/privacy', request)}" class="footer-link">Privacy Policy</a>
+                                <a href="${absoluteUrl('/terms', request)}" class="footer-link">Terms of Service</a>
                                 <a href="mailto:support@ninjabazaar.com" class="footer-link">Support</a>
                             </div>
                         </div>

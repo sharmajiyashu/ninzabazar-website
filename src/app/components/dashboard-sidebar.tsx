@@ -85,7 +85,9 @@ export function DashboardSidebar() {
           const title = item.title
 
           if (!hasItems) {
-            const isActive = pathname === href
+            const isActive =
+              pathname === href ||
+              (href === '/seller/dashboard' && pathname === '/seller/home')
             return (
               <Link
                 key={href}
