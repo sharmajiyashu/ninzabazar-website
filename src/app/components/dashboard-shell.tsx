@@ -10,7 +10,8 @@ import {
   IconLogout,
 } from '@tabler/icons-react'
 import { usePathname } from 'next/navigation'
-import { signOut, useSession } from 'next-auth/react'
+import { useSession } from 'next-auth/react'
+import { signOutAsSeller } from '@/lib/auth-actions'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -116,7 +117,7 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
                   <DropdownMenu.Separator className="my-1 h-px bg-border" />
                   <DropdownMenu.Item
                     className="flex cursor-pointer items-center gap-2 rounded-md px-2 py-2 text-sm text-muted-foreground outline-none hover:bg-muted hover:text-foreground focus:bg-muted focus:text-foreground"
-                    onSelect={() => signOut()}
+                    onSelect={() => void signOutAsSeller()}
                   >
                     <IconLogout className="h-4 w-4" aria-hidden />
                     Log out

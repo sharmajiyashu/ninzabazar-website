@@ -9,9 +9,7 @@ const server = http.createServer(app)
 
 const io = new Server(server, {
   cors: {
-    origin: '*', // for development
-    // origin: 'http://localhost:3000', // for development
-    // origin: 'https://ninjabazaar.vercel.app', // for production
+    origin: '*',
     methods: ['GET', 'POST'],
   },
 })

@@ -5,6 +5,7 @@ import { usePathname } from 'next/navigation'
 import NavBar from './components/nav-bar'
 import Footer from './components/footer'
 import { DashboardShell } from './components/dashboard-shell'
+import { SellerRouteGuard } from './components/seller-route-guard'
 import { useSession } from 'next-auth/react'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -37,7 +38,11 @@ const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
   }
 
   if (shell === 'seller') {
-    return withDates(<DashboardShell>{children}</DashboardShell>)
+    return withDates(
+      <SellerRouteGuard>
+        <DashboardShell>{children}</DashboardShell>
+      </SellerRouteGuard>
+    )
   }
 
   return withDates(

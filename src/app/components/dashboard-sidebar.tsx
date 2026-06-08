@@ -15,7 +15,7 @@ import {
 } from '@tabler/icons-react'
 import React from 'react'
 import { twMerge } from 'tailwind-merge'
-import { signOut } from 'next-auth/react'
+import { signOutAsSeller } from '@/lib/auth-actions'
 import { ROUTES, matchesPath } from '@/lib/routes'
 
 export interface SidebarNavItem {
@@ -54,7 +54,7 @@ export function DashboardSidebar() {
   )
 
   const handleLogout = () => {
-    signOut()
+    void signOutAsSeller()
   }
 
   return (

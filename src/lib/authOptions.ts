@@ -97,7 +97,8 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days validity for session
   },
-  useSecureCookies: process.env.NODE_ENV === 'production',
+  // Secure cookies only on HTTPS deployments — avoids broken logout on localhost `npm start`
+  useSecureCookies: Boolean(process.env.VERCEL),
   secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: ROUTES.auth.login,
