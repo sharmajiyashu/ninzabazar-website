@@ -3,7 +3,6 @@ import prisma from '@/lib/prisma';
 
 export async function GET() {
   try {
-    // @ts-ignore
     const categories = await prisma.category.findMany({
       where: { isActive: true },
       include: {

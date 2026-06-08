@@ -222,14 +222,7 @@ export const QuantityCell = ({
   )
 }
 
-export const TotalPriceCell = ({
-  product,
-  price,
-}: {
-  id: string
-  product: CartItem
-  price: number
-}) => {
+export const TotalPriceCell = ({ product }: { product: CartItem }) => {
   // Get quantity from store using the same method as QuantityCell
   const getQuantity = useCartStore((state) => state.getQuantity)
 

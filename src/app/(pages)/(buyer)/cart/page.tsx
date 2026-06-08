@@ -15,7 +15,7 @@ import {
 import { useSession } from 'next-auth/react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import { formatVariantCombinationLabel, getCartItemUnitPrice } from '@/lib/cart-utils'
+import { getCartItemUnitPrice } from '@/lib/cart-utils'
 import { CartItem, UserProps } from '@/app/types/type'
 import { ShoppingCart, Trash2, X } from 'lucide-react'
 import { toast } from 'sonner'

@@ -26,15 +26,7 @@ import { toast } from 'sonner'
 const productSchema = z.object({
   productName: z.string().min(1, 'Product Name is required'),
   category: z.string().min(4, 'Category is required'),
-  productKeywords: z
-    .string()
-    .min(1, 'Product Keywords are required')
-    .transform((str) =>
-      str
-        .split(',')
-        .map((keyword) => keyword.trim())
-        .filter((keyword) => keyword.length > 0)
-    ),
+  productKeywords: z.string().min(1, 'Product Keywords are required'),
   description: z.string().min(1, 'Description is required'),
   basePrice: z.coerce.number().min(0.01, 'Base Price must be greater than 0'),
   shippingMethods: z.boolean().default(false),
@@ -151,7 +143,7 @@ const PostPageContent = () => {
     },
   ])
   // State for MOQs (Minimum Order Quantities)
-  const [moqs, setMoqs] = useState([{ quantityRange: '', price: 0 }])
+  const [moqs] = useState([{ quantityRange: '', price: 0 }])
   // State for shipping methods
   const [shippingMethods, setShippingMethods] = useState([
     {
@@ -173,7 +165,6 @@ const PostPageContent = () => {
   const [availableColors, setAvailableColors] = useState<{ id: string; name: string; hexCode?: string }[]>([])
   const [availableMaterials, setAvailableMaterials] = useState<{ id: string; name: string }[]>([])
 
-  const subCategoryValue = watch('subCategory')
   const categoryValue = watch('category')
   const { data: session } = useSession()
 
@@ -331,7 +322,9 @@ const PostPageContent = () => {
   //   setMoqs((prev) => prev.filter((_, index) => index !== moqIndex))
   // }
 
-  const [fetchedCategories, setFetchedCategories] = useState<any[]>([]);
+  const [fetchedCategories, setFetchedCategories] = useState<
+    { id: string; name: string; subCategories: { id: string; name: string }[] }[]
+  >([])
 
   React.useEffect(() => {
     const fetchCats = async () => {
@@ -464,8 +457,8 @@ const PostPageContent = () => {
   }, [editProductId, reset, router]);
 
   const selectedCategoryObj = React.useMemo(() => {
-    return fetchedCategories.find(c => c.id === watch('category'));
-  }, [fetchedCategories, watch('category')]);
+    return fetchedCategories.find((c) => c.id === categoryValue)
+  }, [fetchedCategories, categoryValue])
 
   const onSubmit = async (data: ProductFormValues) => {
     try {
@@ -494,10 +487,11 @@ const PostPageContent = () => {
           m.price >= 0
       )
 
-      const keywords =
-        typeof data.productKeywords === 'string'
-          ? data.productKeywords
-          : data.productKeywords.join(',')
+      const keywords = data.productKeywords
+        .split(',')
+        .map((keyword) => keyword.trim())
+        .filter(Boolean)
+        .join(',')
 
       const formDataToSend = new FormData()
       formDataToSend.append('name', data.productName)
@@ -682,8 +676,8 @@ const PostPageContent = () => {
                     <SelectContent>
                       <SelectGroup>
                         <SelectItem value="none">None</SelectItem>
-                        {selectedCategoryObj.subCategories.map((sub: any, index: number) => (
-                          <SelectItem key={index} value={sub.id}>
+                        {selectedCategoryObj.subCategories.map((sub) => (
+                          <SelectItem key={sub.id} value={sub.id}>
                             {sub.name}
                           </SelectItem>
                         ))}

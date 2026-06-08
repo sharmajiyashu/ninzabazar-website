@@ -36,8 +36,10 @@ const defaultDeals = [
 function parseSectionConfig(config: unknown): Record<string, unknown> {
   if (!config) return {};
   if (typeof config === 'string') {
+    const trimmed = config.trim();
+    if (!trimmed) return {};
     try {
-      return JSON.parse(config) as Record<string, unknown>;
+      return JSON.parse(trimmed) as Record<string, unknown>;
     } catch {
       return {};
     }

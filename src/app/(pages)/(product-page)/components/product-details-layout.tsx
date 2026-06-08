@@ -157,7 +157,10 @@ export default function ProductDetailsLayout() {
       sellerId: product!.seller.id,
       images: defaultImage?.urlpath || '',
       variantCombination,
-      variants: product!.variants || [],
+      variants: (product!.variants || []).map((v) => ({
+        ...v,
+        price: Number(v.price),
+      })),
       product: product as CartItem['product'],
     }
   }

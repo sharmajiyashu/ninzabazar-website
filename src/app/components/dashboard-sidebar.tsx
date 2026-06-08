@@ -1,6 +1,7 @@
 'use client'
 
 import Link from 'next/link'
+import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import * as Collapsible from '@radix-ui/react-collapsible'
 import {
@@ -64,7 +65,7 @@ export function DashboardSidebar() {
           aria-label="Ninja Bazaar — go to homepage"
           className="flex min-w-0 items-center gap-2.5 transition-transform hover:opacity-90 active:scale-[0.98]"
         >
-          <img
+          <Image
             src="/img/authentication/shopping_cart_3d.png"
             alt=""
             width={32}

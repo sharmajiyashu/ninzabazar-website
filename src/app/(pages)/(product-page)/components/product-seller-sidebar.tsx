@@ -39,7 +39,6 @@ function formatAddress(addr?: Address | null) {
 }
 
 export default function ProductSellerSidebar({
-  productId: _productId,
   productName,
   seller,
   minOrderQuantity,

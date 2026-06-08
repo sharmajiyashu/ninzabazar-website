@@ -74,17 +74,7 @@ export const columns = (): ColumnDef<CartItem>[] => [
     accessorKey: 'totalPrice',
     header: 'Total Price',
     cell: ({ row }) => {
-      const price = row.original.isSale
-        ? row.original.salePrice
-        : row.original.basePrice
-
-      return (
-        <TotalPriceCell
-          product={row.original}
-          id={row.original.id}
-          price={price}
-        />
-      )
+      return <TotalPriceCell product={row.original} />
     },
   },
   // ACTIONS --------------------------------------------------------

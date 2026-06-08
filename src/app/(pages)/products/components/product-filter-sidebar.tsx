@@ -1,5 +1,6 @@
 'use client'
 
+import Image from 'next/image'
 import { ChevronRight } from 'lucide-react'
 
 type FilterOption = { id: string; name: string; hexCode?: string | null; imageUrl?: string | null }
@@ -145,7 +146,13 @@ export default function ProductFilterSidebar({
                   className="rounded border-gray-300 text-[#006d44]"
                 />
                 {sub.imageUrl ? (
-                  <img src={sub.imageUrl} alt="" className="w-6 h-6 rounded object-cover shrink-0" />
+                  <Image
+                    src={sub.imageUrl}
+                    alt={sub.name}
+                    width={24}
+                    height={24}
+                    className="w-6 h-6 rounded object-cover shrink-0"
+                  />
                 ) : (
                   <span className="w-6 h-6 rounded bg-gray-100 shrink-0 flex items-center justify-center text-[10px] font-bold text-gray-500">
                     {sub.name.charAt(0)}

@@ -1,4 +1,5 @@
 import Link from 'next/link'
+import Image from 'next/image'
 import React from 'react'
 import { Facebook, Linkedin, Twitter } from 'lucide-react'
 import { toast } from 'sonner'
@@ -14,7 +15,7 @@ const Footer = () => {
               aria-label="Ninja Bazaar — go to homepage"
               className="inline-flex items-center gap-2 transition-opacity hover:opacity-90"
             >
-              <img
+              <Image
                 src="/img/authentication/shopping_cart_3d.png"
                 alt=""
                 width={40}
