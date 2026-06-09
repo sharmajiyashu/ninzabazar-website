@@ -45,19 +45,23 @@ export async function signInWithRole(
     }
   }
 
-  // Hard navigation — cookie is guaranteed on the next request (local + Vercel)
   window.location.assign(destination)
   return { ok: true }
 }
 
+async function signOutAndRedirect(callbackUrl: string): Promise<void> {
+  await signOut({ redirect: false })
+  window.location.assign(callbackUrl)
+}
+
 /** Sign out and redirect to seller login. */
-export function signOutAsSeller() {
-  return signOut({ callbackUrl: ROUTES.seller.login, redirect: true })
+export function signOutAsSeller(): Promise<void> {
+  return signOutAndRedirect(ROUTES.seller.login)
 }
 
 /** Sign out and redirect to buyer homepage. */
-export function signOutAsBuyer() {
-  return signOut({ callbackUrl: ROUTES.home, redirect: true })
+export function signOutAsBuyer(): Promise<void> {
+  return signOutAndRedirect(ROUTES.home)
 }
 
 export { getPostLoginPath, getLoginPath, type UserRole }

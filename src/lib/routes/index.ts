@@ -1,4 +1,11 @@
-export { ROUTES, normalizePath, productPath, storePath, storeCompanyPath, sellerPostEditPath } from './paths'
+export {
+  ROUTES,
+  normalizePath,
+  productPath,
+  storePath,
+  storeCompanyPath,
+  sellerPostEditPath,
+} from './paths'
 export {
   AUTH_ROUTES,
   BUYER_PROTECTED_ROUTES,
@@ -14,6 +21,7 @@ export {
   isEmailVerifyPath,
   isBuyerProtectedRoute,
   matchesPath,
+  getAuthenticatedAuthRedirect,
 } from './groups'
 export {
   productsPath,

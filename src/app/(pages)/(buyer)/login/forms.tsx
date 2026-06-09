@@ -2,7 +2,6 @@
 import React, { useState } from 'react'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { useForm } from 'react-hook-form'
-import { z } from 'zod'
 import { Button } from '@/components/ui/button'
 import {
   Form,
@@ -18,15 +17,7 @@ import { signInWithRole } from '@/lib/auth-actions'
 import { toast } from 'sonner'
 import Link from 'next/link'
 import { ROUTES } from '@/lib/routes'
-
-const formSchema = z.object({
-  email: z.string().email({
-    message: 'Invalid email address.',
-  }),
-  password: z.string().min(6, {
-    message: 'Password must be at least 6 characters.',
-  }),
-})
+import { loginSchema, type LoginDto } from '@/lib/validations/login'
 
 const LoginForms = () => {
   const [activeTab, setActiveTab] = useState<'email' | 'mobile'>('email')
@@ -38,15 +29,15 @@ const LoginForms = () => {
   const [otpSent, setOtpSent] = useState(false)
   const [otpCode, setOtpCode] = useState('')
 
-  const form = useForm({
-    resolver: zodResolver(formSchema),
+  const form = useForm<LoginDto>({
+    resolver: zodResolver(loginSchema),
     defaultValues: {
       email: '',
       password: '',
     },
   })
 
-  async function onSubmit(values: z.infer<typeof formSchema>) {
+  async function onSubmit(values: LoginDto) {
     try {
       setIsLoading(true)
 

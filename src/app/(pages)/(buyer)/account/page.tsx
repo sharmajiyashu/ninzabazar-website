@@ -2,15 +2,12 @@
 
 import React, { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
 import axios from 'axios'
 import AccountTabs from './components/account-tabs'
 import { UserProps } from '@/app/types/type'
-import { ROUTES } from '@/lib/routes'
 
 export default function BuyerAccountPage() {
   const { data: session, status } = useSession()
-  const router = useRouter()
   const [userData, setUserData] = useState<UserProps | null>(null)
   const [loading, setLoading] = useState(true)
 
@@ -31,14 +28,10 @@ export default function BuyerAccountPage() {
   }, [session?.user?.id])
 
   useEffect(() => {
-    if (status === 'unauthenticated') {
-      router.replace(ROUTES.auth.login)
-      return
-    }
     if (status === 'authenticated') {
       fetchUserData()
     }
-  }, [status, fetchUserData, router])
+  }, [status, fetchUserData])
 
   if (status === 'loading' || loading) {
     return (

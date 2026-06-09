@@ -7,13 +7,15 @@ import {
   isEmailVerifyPath,
   isSellerProtectedRoute,
   isBuyerProtectedRoute,
+  getAuthenticatedAuthRedirect,
   matchesPath,
   redirectPath,
 } from '@/lib/routes'
-import { authDebug, readSessionToken } from '@/lib/auth-config'
+import { authDebug, readSessionToken, syncNextAuthUrlFromRequest } from '@/lib/auth-config'
 
 export async function middleware(req: NextRequest) {
   try {
+    syncNextAuthUrlFromRequest(req)
     return await runMiddleware(req)
   } catch (error) {
     console.error('[middleware] Unhandled error', error)
@@ -41,16 +43,12 @@ async function runMiddleware(req: NextRequest) {
     storeStatus: token?.storeStatus ?? null,
   })
 
-  // ── Authenticated user on login pages → role dashboard ─────────────────────
-  if (matchesPath(pathname, ROUTES.auth.login) && token) {
-    if (token.role === 'SELLER') {
-      return NextResponse.redirect(redirectPath(ROUTES.seller.dashboard, req))
+  // ── Authenticated user on login/signup → role dashboard ────────────────────
+  if (token) {
+    const authRedirect = getAuthenticatedAuthRedirect(pathname, token.role as string)
+    if (authRedirect) {
+      return NextResponse.redirect(redirectPath(authRedirect, req))
     }
-    return NextResponse.redirect(redirectPath(ROUTES.home, req))
-  }
-
-  if (token?.role === 'SELLER' && matchesPath(pathname, ROUTES.seller.login)) {
-    return NextResponse.redirect(redirectPath(ROUTES.seller.dashboard, req))
   }
 
   // ── Buyer protected routes ───────────────────────────────────────────────────
@@ -80,14 +78,6 @@ async function runMiddleware(req: NextRequest) {
     if (isVerified && matchesPath(pathname, ROUTES.auth.verifyEmail)) {
       return NextResponse.redirect(redirectPath(ROUTES.home, req))
     }
-  }
-
-  if (
-    matchesPath(pathname, ROUTES.auth.verifyEmail) &&
-    token?.role === 'BUYER' &&
-    token.emailVerified === true
-  ) {
-    return NextResponse.redirect(redirectPath(ROUTES.home, req))
   }
 
   // ── Seller protected routes ──────────────────────────────────────────────────

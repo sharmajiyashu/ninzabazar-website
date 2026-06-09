@@ -5,7 +5,8 @@ import { usePathname } from 'next/navigation'
 import NavBar from './components/nav-bar'
 import Footer from './components/footer'
 import { DashboardShell } from './components/dashboard-shell'
-import { SellerRouteGuard } from './components/seller-route-guard'
+import { RouteGuard } from '@/components/route-guard'
+import { GuestGuard } from '@/components/guest-guard'
 import { useSession } from 'next-auth/react'
 import { LocalizationProvider } from '@mui/x-date-pickers'
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs'
@@ -33,25 +34,20 @@ const LayoutWrapper = ({ children }: { children: React.ReactNode }) => {
     <LocalizationProvider dateAdapter={AdapterDayjs}>{content}</LocalizationProvider>
   )
 
-  if (shell === 'auth') {
-    return withDates(children)
-  }
-
-  if (shell === 'seller') {
-    return withDates(
-      <SellerRouteGuard>
-        <DashboardShell>{children}</DashboardShell>
-      </SellerRouteGuard>
+  const content =
+    shell === 'auth' ? (
+      <GuestGuard>{children}</GuestGuard>
+    ) : shell === 'seller' ? (
+      <DashboardShell>{children}</DashboardShell>
+    ) : (
+      <div className="flex min-h-screen min-w-0 flex-col">
+        <NavBar />
+        <main className="min-w-0 flex-1 animate-fade-in-soft">{children}</main>
+        <Footer />
+      </div>
     )
-  }
 
-  return withDates(
-    <div className="flex min-h-screen min-w-0 flex-col">
-      <NavBar />
-      <main className="min-w-0 flex-1 animate-fade-in-soft">{children}</main>
-      <Footer />
-    </div>
-  )
+  return withDates(<RouteGuard>{content}</RouteGuard>)
 }
 
 export default LayoutWrapper

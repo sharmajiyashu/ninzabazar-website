@@ -100,4 +100,27 @@ export function matchesPath(pathname: string, route: string): boolean {
   return normalizePath(pathname) === normalizePath(route)
 }
 
+/** Where to send an authenticated user who hits login/signup pages. */
+export function getAuthenticatedAuthRedirect(
+  pathname: string,
+  role: string | undefined
+): string | null {
+  if (!role) return null
+
+  const path = normalizePath(pathname)
+  const isBuyerAuth =
+    path === normalizePath(ROUTES.auth.login) ||
+    path === normalizePath(ROUTES.auth.signup)
+  const isSellerAuth =
+    path === normalizePath(ROUTES.seller.login) ||
+    path === normalizePath(ROUTES.seller.signup)
+
+  if (!isBuyerAuth && !isSellerAuth) return null
+
+  if (role === 'SELLER') return ROUTES.seller.dashboard
+  if (role === 'BUYER') return ROUTES.home
+
+  return null
+}
+
 export { productPath, storePath }
