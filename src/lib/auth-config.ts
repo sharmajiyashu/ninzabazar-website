@@ -19,22 +19,34 @@ export function getAuthSecret(): string {
  */
 export function shouldUseSecureCookies(): boolean {
   if (process.env.VERCEL === '1') return true
+  if (process.env.NODE_ENV === 'production') return true
   const url = process.env.NEXTAUTH_URL ?? ''
   return url.startsWith('https://')
 }
 
+/** NextAuth session cookie name — must match getToken() in middleware. */
+export function getSessionCookieName(): string {
+  return shouldUseSecureCookies()
+    ? '__Secure-next-auth.session-token'
+    : 'next-auth.session-token'
+}
+
 /**
  * NextAuth reads NEXTAUTH_URL when issuing session cookies.
- * Sync from the incoming request when unset or still pointing at localhost.
+ * On Vercel always derive from the incoming request (production + preview URLs differ).
  */
 export function syncNextAuthUrlFromRequest(req: Request | NextRequest): void {
-  const current = process.env.NEXTAUTH_URL?.replace(/\/$/, '')
-  const isLocal =
-    !current ||
-    current.includes('localhost') ||
-    current.includes('127.0.0.1')
+  const onVercel = process.env.VERCEL === '1'
 
-  if (current?.startsWith('https://') && !isLocal) return
+  if (!onVercel) {
+    const current = process.env.NEXTAUTH_URL?.replace(/\/$/, '')
+    const isLocal =
+      !current ||
+      current.includes('localhost') ||
+      current.includes('127.0.0.1')
+
+    if (current?.startsWith('https://') && !isLocal) return
+  }
 
   const url = new URL(req.url)
   const host =
@@ -62,6 +74,7 @@ export async function readSessionToken(req: NextRequest) {
       req,
       secret,
       secureCookie: shouldUseSecureCookies(),
+      cookieName: getSessionCookieName(),
     })
   } catch (error) {
     console.error('[auth] Failed to read session token in middleware', error)

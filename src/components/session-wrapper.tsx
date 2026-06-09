@@ -4,7 +4,7 @@ import React from 'react'
 
 const SessionWrapper = ({ children }: { children: React.ReactNode }) => {
   return (
-    <SessionProvider refetchOnWindowFocus={true} refetchInterval={5 * 60}>
+    <SessionProvider refetchOnWindowFocus={true}>
       {children}
     </SessionProvider>
   )

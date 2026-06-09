@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { usePathname, useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import {
@@ -11,13 +11,15 @@ import {
 } from '@/lib/routes'
 
 /**
- * Client-side guard for protected buyer and seller routes.
- * Mirrors middleware checks — handles refresh, expired sessions, and logout.
+ * Client-side fallback for protected routes.
+ * Middleware is the primary gate — this only redirects after session
+ * resolves to unauthenticated (avoids infinite Loading on Vercel).
  */
 export function RouteGuard({ children }: { children: React.ReactNode }) {
   const { status, data: session } = useSession()
   const pathname = usePathname()
   const router = useRouter()
+  const redirected = useRef(false)
 
   const isProtected =
     isBuyerProtectedRoute(pathname) || isSellerProtectedRoute(pathname)
@@ -27,9 +29,13 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     : ROUTES.auth.login
 
   useEffect(() => {
-    if (status === 'unauthenticated' && isProtected) {
-      router.replace(loginPath)
-    }
+    redirected.current = false
+  }, [pathname])
+
+  useEffect(() => {
+    if (!isProtected || status !== 'unauthenticated' || redirected.current) return
+    redirected.current = true
+    router.replace(loginPath)
   }, [status, isProtected, loginPath, router])
 
   useEffect(() => {
@@ -46,19 +52,13 @@ export function RouteGuard({ children }: { children: React.ReactNode }) {
     return <>{children}</>
   }
 
-  if (status === 'loading') {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background text-muted-foreground">
-        Loading...
-      </div>
-    )
-  }
-
+  // Middleware already verified the session cookie — do not block on loading.
   if (status === 'unauthenticated') {
     return null
   }
 
   if (
+    status === 'authenticated' &&
     isSellerProtectedRoute(pathname) &&
     session?.user?.role !== 'SELLER'
   ) {

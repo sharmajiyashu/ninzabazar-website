@@ -4,7 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import prisma from './prisma'
 import { comparePassword } from './hashPassword'
 import { ROUTES } from './routes'
-import { shouldUseSecureCookies } from './auth-config'
+import { shouldUseSecureCookies, getSessionCookieName } from './auth-config'
 
 interface CustomUser extends User {
   id: string
@@ -100,6 +100,17 @@ export const authOptions: NextAuthOptions = {
   },
   useSecureCookies: shouldUseSecureCookies(),
   secret: process.env.NEXTAUTH_SECRET,
+  cookies: {
+    sessionToken: {
+      name: getSessionCookieName(),
+      options: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: shouldUseSecureCookies(),
+      },
+    },
+  },
   pages: {
     signIn: ROUTES.auth.login,
     error: ROUTES.notFound,

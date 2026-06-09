@@ -1,4 +1,4 @@
-import { signIn, signOut } from 'next-auth/react'
+import { signIn, signOut, getSession } from 'next-auth/react'
 import {
   getPostLoginPath,
   getLoginPath,
@@ -11,10 +11,19 @@ export type SignInResult =
   | { ok: true }
   | { ok: false; error: string }
 
+/** Wait until the session cookie is readable by the client (post-login). */
+async function waitForClientSession(maxAttempts = 25): Promise<boolean> {
+  for (let i = 0; i < maxAttempts; i++) {
+    const session = await getSession()
+    if (session?.user) return true
+    await new Promise((resolve) => setTimeout(resolve, 120))
+  }
+  return false
+}
+
 /**
  * Credentials login with role validation and a full-page redirect.
- * Full navigation ensures the session cookie is committed before middleware
- * runs — fixes inconsistent redirects on Vercel production.
+ * Waits for the session before navigating — fixes Vercel cookie timing issues.
  */
 export async function signInWithRole(
   email: string,
@@ -45,13 +54,17 @@ export async function signInWithRole(
     }
   }
 
-  window.location.assign(destination)
+  const sessionReady = await waitForClientSession()
+  authDebug('signInWithRole:session', { sessionReady, destination })
+
+  // Hard navigation — ensures middleware reads the cookie on the next request
+  window.location.replace(destination)
   return { ok: true }
 }
 
 async function signOutAndRedirect(callbackUrl: string): Promise<void> {
   await signOut({ redirect: false })
-  window.location.assign(callbackUrl)
+  window.location.replace(callbackUrl)
 }
 
 /** Sign out and redirect to seller login. */
