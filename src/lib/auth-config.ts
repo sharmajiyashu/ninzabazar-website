@@ -18,7 +18,7 @@ export function getAuthSecret(): string {
  * CRITICAL: both must use the same value or sessions appear missing in middleware.
  */
 export function shouldUseSecureCookies(): boolean {
-  if (process.env.VERCEL) return true
+  if (process.env.VERCEL === '1') return true
   const url = process.env.NEXTAUTH_URL ?? ''
   return url.startsWith('https://')
 }
@@ -50,11 +50,23 @@ export function syncNextAuthUrlFromRequest(req: Request | NextRequest): void {
 
 /** Read JWT session in middleware with the same cookie settings as NextAuth. */
 export async function readSessionToken(req: NextRequest) {
-  return getToken({
-    req,
-    secret: getAuthSecret(),
-    secureCookie: shouldUseSecureCookies(),
-  })
+  try {
+    const secret = process.env.NEXTAUTH_SECRET
+    if (!secret) {
+      console.error(
+        '[auth] NEXTAUTH_SECRET is not set — middleware auth checks skipped'
+      )
+      return null
+    }
+    return await getToken({
+      req,
+      secret,
+      secureCookie: shouldUseSecureCookies(),
+    })
+  } catch (error) {
+    console.error('[auth] Failed to read session token in middleware', error)
+    return null
+  }
 }
 
 /** Default landing path after successful login. */

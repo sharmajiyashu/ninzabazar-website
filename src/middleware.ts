@@ -13,6 +13,15 @@ import {
 import { authDebug, readSessionToken } from '@/lib/auth-config'
 
 export async function middleware(req: NextRequest) {
+  try {
+    return await runMiddleware(req)
+  } catch (error) {
+    console.error('[middleware] Unhandled error', error)
+    return NextResponse.next()
+  }
+}
+
+async function runMiddleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
 
   if (

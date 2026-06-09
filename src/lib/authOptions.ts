@@ -4,7 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import prisma from './prisma'
 import { comparePassword } from './hashPassword'
 import { ROUTES } from './routes'
-import { getAuthSecret, shouldUseSecureCookies } from './auth-config'
+import { shouldUseSecureCookies } from './auth-config'
 
 interface CustomUser extends User {
   id: string
@@ -99,7 +99,7 @@ export const authOptions: NextAuthOptions = {
     maxAge: 30 * 24 * 60 * 60, // 30 days validity for session
   },
   useSecureCookies: shouldUseSecureCookies(),
-  secret: getAuthSecret(),
+  secret: process.env.NEXTAUTH_SECRET,
   pages: {
     signIn: ROUTES.auth.login,
     error: ROUTES.notFound,
