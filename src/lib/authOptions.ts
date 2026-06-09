@@ -4,6 +4,7 @@ import CredentialsProvider from 'next-auth/providers/credentials'
 import prisma from './prisma'
 import { comparePassword } from './hashPassword'
 import { ROUTES } from './routes'
+import { getAuthSecret, shouldUseSecureCookies } from './auth-config'
 
 interface CustomUser extends User {
   id: string
@@ -97,9 +98,8 @@ export const authOptions: NextAuthOptions = {
     strategy: 'jwt',
     maxAge: 30 * 24 * 60 * 60, // 30 days validity for session
   },
-  // Secure cookies only on HTTPS deployments — avoids broken logout on localhost `npm start`
-  useSecureCookies: Boolean(process.env.VERCEL),
-  secret: process.env.NEXTAUTH_SECRET,
+  useSecureCookies: shouldUseSecureCookies(),
+  secret: getAuthSecret(),
   pages: {
     signIn: ROUTES.auth.login,
     error: ROUTES.notFound,
@@ -305,13 +305,13 @@ export const authOptions: NextAuthOptions = {
         ...session,
         user: {
           ...session.user,
-          id: token.id,
-          email: token.email,
-          name: token.name,
-          role: token.role,
-          image: token.picture,
-          emailVerified: token.emailVerified,
-          storeStatus: token.storeStatus,
+          id: token.id as string,
+          email: token.email as string,
+          name: token.name as string,
+          role: token.role as string,
+          image: token.picture as string | undefined,
+          emailVerified: token.emailVerified as boolean | undefined,
+          storeStatus: token.storeStatus as string | null | undefined,
         },
       }
     },

@@ -3,7 +3,8 @@ import React, { useEffect, useRef, useState } from 'react'
 import { User, ShoppingCart, Search, ChevronDown } from 'lucide-react'
 
 import Link from 'next/link'
-import { signOut, useSession } from 'next-auth/react'
+import { signOutAsBuyer } from '@/lib/auth-actions'
+import { useSession } from 'next-auth/react'
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -198,7 +199,7 @@ const NavBar = () => {
                     <DropdownMenuItem>Orders</DropdownMenuItem>
                   </Link>
                   <DropdownMenuItem
-                    onClick={() => signOut({ callbackUrl: ROUTES.home })}
+                    onClick={() => void signOutAsBuyer()}
                     className="text-red-600"
                   >
                     Logout
@@ -366,7 +367,7 @@ const NavBar = () => {
                     </DropdownMenuItem>
                   </Link>
                   <DropdownMenuItem
-                    onClick={() => signOut({ callbackUrl: '/' })}
+                    onClick={() => void signOutAsBuyer()}
                     className="cursor-pointer px-4 py-2 text-red-600"
                   >
                     Logout

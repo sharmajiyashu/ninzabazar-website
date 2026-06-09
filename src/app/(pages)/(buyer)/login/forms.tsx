@@ -14,10 +14,10 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react'
-import { signIn } from 'next-auth/react'
-import { useRouter } from 'next/navigation'
+import { signInWithRole } from '@/lib/auth-actions'
 import { toast } from 'sonner'
 import Link from 'next/link'
+import { ROUTES } from '@/lib/routes'
 
 const formSchema = z.object({
   email: z.string().email({
@@ -38,7 +38,6 @@ const LoginForms = () => {
   const [otpSent, setOtpSent] = useState(false)
   const [otpCode, setOtpCode] = useState('')
 
-  const router = useRouter()
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -50,25 +49,25 @@ const LoginForms = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     try {
       setIsLoading(true)
-      const response = await signIn('credentials', {
-        redirect: false,
-        email: values.email,
-        password: values.password,
-        role: 'BUYER',
-      })
 
-      if (!response?.ok) {
-        setIsLoading(false)
-        toast.error('Incorrect username or password', {
-          className: 'm-6',
-        })
-        throw new Error('Failed to sign in')
+      const result = await signInWithRole(
+        values.email,
+        values.password,
+        'BUYER'
+      )
+
+      if (!result.ok) {
+        toast.error(result.error, { className: 'm-6' })
+        return
       }
+
       toast.success('Welcome to Ninja Bazaar!', { className: 'm-6' })
-      router.push('/')
-      setIsLoading(false)
     } catch (error) {
-      console.log(error)
+      console.error(error)
+      toast.error('Something went wrong. Please try again.', {
+        className: 'm-6',
+      })
+    } finally {
       setIsLoading(false)
     }
   }
@@ -97,7 +96,7 @@ const LoginForms = () => {
     setTimeout(() => {
       setIsLoading(false)
       toast.success('Logged in successfully via OTP!')
-      router.push('/')
+      window.location.assign(ROUTES.home)
     }, 1500)
   }
 

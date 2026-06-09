@@ -14,9 +14,8 @@ import {
 } from '@/components/ui/form'
 import { Input } from '@/components/ui/input'
 import { Eye, EyeOff, Lock, ShieldCheck } from 'lucide-react'
-import { signIn } from 'next-auth/react'
+import { signInWithRole } from '@/lib/auth-actions'
 import { toast } from 'sonner'
-import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ROUTES } from '@/lib/routes'
 
@@ -38,8 +37,6 @@ const LoginForms = () => {
   const [otpSent, setOtpSent] = useState(false)
   const [otpCode, setOtpCode] = useState('')
 
-  const router = useRouter()
-
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -51,26 +48,19 @@ const LoginForms = () => {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true)
 
-    const response = await signIn('credentials', {
-      redirect: false,
-      email: values.email,
-      password: values.password,
-      role: 'SELLER',
-      callbackUrl: ROUTES.seller.dashboard,
-    })
+    const result = await signInWithRole(
+      values.email,
+      values.password,
+      'SELLER'
+    )
 
-    if (!response?.ok) {
-      toast.error(response?.error ?? 'Incorrect username or password', {
-        className: 'm-6',
-      })
+    if (!result.ok) {
+      toast.error(result.error, { className: 'm-6' })
       setIsLoading(false)
       return
     }
 
     toast.success('Login successful!', { className: 'm-6' })
-    router.push(ROUTES.seller.dashboard)
-    router.refresh()
-    setIsLoading(false)
   }
 
   const handleSendOtp = async (e: React.FormEvent) => {
@@ -97,7 +87,7 @@ const LoginForms = () => {
     setTimeout(() => {
       setIsLoading(false)
       toast.success('Logged in successfully via OTP!')
-      router.push(ROUTES.seller.dashboard)
+      window.location.assign(ROUTES.seller.dashboard)
     }, 1500)
   }
 

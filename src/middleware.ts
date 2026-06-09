@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
-import { getToken } from 'next-auth/jwt'
 import {
   ROUTES,
   SELLER_PENDING_ALLOWED,
@@ -11,6 +10,7 @@ import {
   matchesPath,
   redirectPath,
 } from '@/lib/routes'
+import { authDebug, readSessionToken } from '@/lib/auth-config'
 
 export async function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname
@@ -22,12 +22,17 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  const token = await getToken({
-    req,
-    secret: process.env.NEXTAUTH_SECRET,
+  const token = await readSessionToken(req)
+
+  authDebug('middleware', {
+    pathname,
+    hasToken: Boolean(token),
+    role: token?.role ?? null,
+    emailVerified: token?.emailVerified ?? null,
+    storeStatus: token?.storeStatus ?? null,
   })
 
-  // ── Buyer login: redirect authenticated users ──────────────────────────────
+  // ── Authenticated user on login pages → role dashboard ─────────────────────
   if (matchesPath(pathname, ROUTES.auth.login) && token) {
     if (token.role === 'SELLER') {
       return NextResponse.redirect(redirectPath(ROUTES.seller.dashboard, req))
@@ -35,17 +40,16 @@ export async function middleware(req: NextRequest) {
     return NextResponse.redirect(redirectPath(ROUTES.home, req))
   }
 
+  if (token?.role === 'SELLER' && matchesPath(pathname, ROUTES.seller.login)) {
+    return NextResponse.redirect(redirectPath(ROUTES.seller.dashboard, req))
+  }
+
   // ── Buyer protected routes ───────────────────────────────────────────────────
   if (isBuyerProtectedRoute(pathname) && !token) {
     return NextResponse.redirect(redirectPath(ROUTES.auth.login, req))
   }
 
-  // ── Seller login: redirect authenticated sellers ───────────────────────────
-  if (token?.role === 'SELLER' && matchesPath(pathname, ROUTES.seller.login)) {
-    return NextResponse.redirect(redirectPath(ROUTES.seller.dashboard, req))
-  }
-
-  // ── Seller on buyer home → seller dashboard (skip if pending approval) ─────
+  // ── Seller on buyer home → seller dashboard (unless pending approval) ───────
   if (
     token?.role === 'SELLER' &&
     matchesPath(pathname, ROUTES.home) &&
@@ -87,7 +91,7 @@ export async function middleware(req: NextRequest) {
     }
   }
 
-  // ── Pending seller: restrict to allowed paths ────────────────────────────────
+  // ── Pending seller ───────────────────────────────────────────────────────────
   if (
     token?.role === 'SELLER' &&
     token.storeStatus === 'pending' &&
@@ -100,7 +104,6 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  // Must be a static literal — Next.js does not support imported matcher arrays
   matcher: [
     '/',
     '/login',
