@@ -8,7 +8,7 @@
     "build": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true})}catch(e){}\" && prisma generate && next build",
     "build:clean": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true})}catch(e){}\" && npm run build",
     "clean": "node -e \"try{require('fs').rmSync('.next',{recursive:true,force:true})}catch(e){}\"",
-    "start": "next start",
+    "start": "node scripts/start-production.cjs",
     "lint": "next lint",
     "server": "nodemon server/server.ts --watch server/server.ts",
     "escrow-cron": "ts-node --esm scripts/cron.ts",
