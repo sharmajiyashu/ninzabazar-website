@@ -36,7 +36,7 @@ export const ConfirmReceiptModal = ({
   }
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={(v) => !v && onClose()}>
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Confirm Receipt</DialogTitle>

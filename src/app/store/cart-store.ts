@@ -277,13 +277,7 @@ const useCartStore = create<CartState>()((set, get) => ({
 
   syncCartWithDatabase: async (userId: string) => {
     try {
-      // Get current user session to fetch cart
-      const response = await fetch(`/api/cart/get?userId=${userId}`)
-      if (!response.ok) throw new Error('Failed to sync cart')
-
-      const data = await response.json()
-      const cartItems = data.cart || []
-
+      const cartItems = await fetchCartFromDatabase(userId)
       set({ cart: cartItems })
     } catch (error) {
       console.error('Failed to sync cart with database:', error)
@@ -348,10 +342,19 @@ async function fetchCartFromDatabase(userId: string): Promise<CartItem[]> {
   }
 
   const data = await response.json()
-  console.log('Raw cart data from API:', data.cart) // Debug log
+  const rawItems = data.cart?.items || data.cart || []
 
-  // Return the items array from the cart object
-  return data.cart?.items || data.cart || []
+  return rawItems.map((item: CartItem) => ({
+    ...item,
+    sellerId: item.sellerId || item.product?.sellerId || item.seller?.id,
+    variants: item.variants || item.product?.variants || [],
+    product: item.product
+      ? {
+          ...item.product,
+          sellerId: item.product.sellerId || item.seller?.id,
+        }
+      : item.product,
+  }))
 }
 
 async function updateQTYToDatabase(id: string, quantity: number) {

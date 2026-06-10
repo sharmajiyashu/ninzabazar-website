@@ -1,15 +1,14 @@
 'use client'
 
 import React, { useEffect, useMemo, useState } from 'react'
-import { MapPin, Package2, CreditCard, Truck, Loader2 } from 'lucide-react'
+import { Package2, CreditCard, Truck, Loader2 } from 'lucide-react'
 import { useSession } from 'next-auth/react'
 import { CartItem, RazorpayOptions, UserProps } from '@/app/types/type'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
-import { formatPhoneNumber } from '@/lib/phoneNumFormatter'
 import useCartStore from '@/app/store/cart-store'
 import CurrencyFormatter from '@/app/components/ui-utils/currency-format'
-import { formatVariantCombinationLabel, getCartItemUnitPrice } from '@/lib/cart-utils'
+import { formatVariantCombinationLabel, getCartItemKey, getCartItemUnitPrice } from '@/lib/cart-utils'
 import Image from 'next/image'
 import razorPay from '../../../../../public/razor-pay.png'
 import paypal from '../../../../../public/paypal.png'
@@ -22,17 +21,34 @@ import {
 } from '@/components/ui/select'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
+import CheckoutAddressSelector from './components/checkout-address-selector'
 
 declare global {
   interface Window {
-    Razorpay: any //eslint-disable-line
+    Razorpay: new (options: RazorpayOptions) => {
+      open: () => void
+      on: (event: string, handler: (response: { error?: { description?: string } }) => void) => void
+    }
   }
+}
+
+function getCheckoutErrorMessage(err: unknown): string {
+  if (axios.isAxiosError(err)) {
+    const data = err.response?.data as
+      | { details?: string; error?: string; message?: string }
+      | undefined
+    return data?.details || data?.error || data?.message || err.message
+  }
+  if (err instanceof Error) return err.message
+  return 'Something went wrong'
 }
 
 const CheckoutPage = () => {
   const [isProcessingPayment, setIsProcessingPayment] = useState(false)
-  const [paymentError, setPaymentError] = useState<string | null>(null) //eslint-disable-line
+  const [paymentError, setPaymentError] = useState<string | null>(null)
   const [isInitialized, setIsInitialized] = useState(false)
+  const [razorpayReady, setRazorpayReady] = useState(false)
+  const [selectedAddressId, setSelectedAddressId] = useState<string | null>(null)
 
   const cartStore = useCartStore()
   const clearCart = useCartStore((state) => state.clearCart)
@@ -48,10 +64,29 @@ const CheckoutPage = () => {
   // Load Razorpay script
   useEffect(() => {
     const loadRazorpayScript = () => {
-      return new Promise((resolve) => {
+      if (typeof window !== 'undefined' && window.Razorpay) {
+        setRazorpayReady(true)
+        return Promise.resolve(true)
+      }
+
+      return new Promise<boolean>((resolve) => {
+        const existing = document.querySelector(
+          'script[src="https://checkout.razorpay.com/v1/checkout.js"]'
+        )
+        if (existing) {
+          existing.addEventListener('load', () => {
+            setRazorpayReady(true)
+            resolve(true)
+          })
+          return
+        }
+
         const script = document.createElement('script')
         script.src = 'https://checkout.razorpay.com/v1/checkout.js'
-        script.onload = () => resolve(true)
+        script.onload = () => {
+          setRazorpayReady(true)
+          resolve(true)
+        }
         script.onerror = () => resolve(false)
         document.body.appendChild(script)
       })
@@ -86,7 +121,7 @@ const CheckoutPage = () => {
       : cartStore.cart
   }, [isInitialized, isBuyNow, cartStore.buyNowItem, cartStore.cart])
 
-  const { data: user, isLoading: isBuyerDetailsLoading } = useQuery<UserProps>({
+  const { data: user, isLoading: isBuyerDetailsLoading, refetch: refetchUser } = useQuery<UserProps>({
     queryKey: ['user', session?.user.id],
     queryFn: async () => {
       const response = await axios.get(`/api/getUser?id=${session?.user.id}`)
@@ -97,45 +132,82 @@ const CheckoutPage = () => {
 
   const userId = user?.buyerProfile?.id
   useEffect(() => {
-    if (userId) {
-      useCartStore.getState().syncCartWithDatabase(userId)
+    if (userId && !isBuyNow) {
+      useCartStore.getState().fetchCart(userId)
     }
-  }, [userId])
+  }, [userId, isBuyNow])
+
+  const addresses = useMemo(
+    () => user?.buyerProfile?.shippingAddresses || [],
+    [user?.buyerProfile?.shippingAddresses]
+  )
+
+  const selectedAddress = useMemo(() => {
+    if (!addresses.length) return null
+    return (
+      addresses.find((addr) => addr.id === selectedAddressId) ||
+      addresses.find((addr) => addr.isDefault) ||
+      addresses[0]
+    )
+  }, [addresses, selectedAddressId])
 
   useEffect(() => {
-    const checkoutItems = sessionStorage.getItem('checkoutItems')
-    const checkoutType = sessionStorage.getItem('checkoutType')
-
-    if (checkoutType === 'buyNow' && checkoutItems) {
-      const parsedItem = JSON.parse(checkoutItems)[0]
-      if (parsedItem) {
-        cartStore.setBuyNowItem(parsedItem)
-      }
+    if (!addresses.length) {
+      setSelectedAddressId(null)
+      return
     }
 
-    setIsInitialized(true)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    if (selectedAddressId && addresses.some((addr) => addr.id === selectedAddressId)) {
+      return
+    }
 
-  const RenderShippingAddresses = () => {
-    const addresses = user?.buyerProfile?.shippingAddresses?.find(
-      (address) => address.isDefault
-    )
+    const initial =
+      addresses.find((addr) => addr.isDefault) || addresses[0]
+    setSelectedAddressId(initial.id)
+  }, [addresses, selectedAddressId])
 
-    if (!addresses) return null
+  const handleAddressSaved = async () => {
+    const { data: updatedUser } = await refetchUser()
+    const updatedAddresses =
+      updatedUser?.buyerProfile?.shippingAddresses || []
 
-    return (
-      <div className="flex flex-col text-gray-500" key={addresses.id}>
-        <p>{addresses.street}</p>
-        <div className="flex space-x-1">
-          <p>{addresses.city}</p>
-          <p>{addresses.state}</p>
-          <p>{addresses.postalCode}</p>
-          <p>{addresses.country}</p>
-        </div>
-      </div>
-    )
+    if (updatedAddresses.length === 0) return
+
+    const defaultAddr =
+      updatedAddresses.find((addr) => addr.isDefault) ||
+      updatedAddresses[updatedAddresses.length - 1]
+
+    setSelectedAddressId(defaultAddr.id)
   }
+
+  // Auto-select shipping so Place Order is not blocked
+  useEffect(() => {
+    if (!isInitialized || cart.length === 0) return
+
+    const currentMethods = useCartStore.getState().selectedShippingMethods
+    const newMethods = { ...currentMethods }
+    let updated = false
+
+    cart.forEach((item) => {
+      const itemKey = getCartItemKey(item)
+      if (newMethods[itemKey]) return
+
+      const methods = item.product?.shippingMethods || []
+      if (methods.length > 0) {
+        newMethods[itemKey] = {
+          name: methods[0].name,
+          price: methods[0].price || 0,
+        }
+      } else {
+        newMethods[itemKey] = { name: 'Standard Shipping', price: 0 }
+      }
+      updated = true
+    })
+
+    if (updated) {
+      useCartStore.setState({ selectedShippingMethods: newMethods })
+    }
+  }, [isInitialized, cart])
 
   const handleShippingMethodChange = (
     cartItemId: string,
@@ -152,6 +224,12 @@ const CheckoutPage = () => {
       })
     }
   }
+
+  const allShippingSelected = useMemo(
+    () =>
+      cart.every((item) => Boolean(selectedShippingMethods[getCartItemKey(item)])),
+    [cart, selectedShippingMethods]
+  )
 
   const cartTotals = useMemo(() => {
     const subtotal = cart.reduce((sum: number, item: CartItem) => {
@@ -208,12 +286,8 @@ const CheckoutPage = () => {
 
       if (!verificationResult.success) throw new Error('Verification failed')
 
-      const defaultAddress = user?.buyerProfile?.shippingAddresses?.find(
-        (addr: { isDefault: boolean }) => addr.isDefault
-      )
-
       const orderItems = cart.map((item) => {
-        const cartItemId = item.id || ''
+        const cartItemId = getCartItemKey(item)
         const shipping = selectedShippingMethods[cartItemId]
         const unitPrice = getCartItemUnitPrice({
           basePrice: Number(item.basePrice),
@@ -225,7 +299,12 @@ const CheckoutPage = () => {
 
         return {
           id: cartItemId,
-          sellerId: item.sellerId || item.seller?.id || item.product?.seller?.id || '',
+          sellerId:
+            item.sellerId ||
+            item.product?.sellerId ||
+            item.seller?.id ||
+            item.product?.seller?.id ||
+            '',
           quantity: item.quantity,
           priceAtPurchase: unitPrice,
           variantId:
@@ -245,7 +324,8 @@ const CheckoutPage = () => {
         totalAmount: cartTotals.total,
         paymentId: response.razorpay_payment_id,
         orderId: response.razorpay_order_id,
-        shippingAddress: defaultAddress,
+        razorpay_signature: response.razorpay_signature,
+        shippingAddress: selectedAddress,
       }
 
       const orderRes = await axios.post('/api/orders/create', orderData)
@@ -263,7 +343,7 @@ const CheckoutPage = () => {
       }
       // eslint-disable-next-line
     } catch (err: any) {
-      const msg = err.message || 'Order failed'
+      const msg = getCheckoutErrorMessage(err)
       setPaymentError(msg)
       toast.error(msg)
     } finally {
@@ -273,24 +353,49 @@ const CheckoutPage = () => {
 
   const handlePlaceOrder = async () => {
     try {
+      setPaymentError(null)
+
+      if (!cart || cart.length === 0) {
+        toast.error('Cart is empty')
+        return
+      }
+      if (!user?.buyerProfile?.id) {
+        toast.error('Please log in to place an order')
+        return
+      }
+      if (!selectedAddress) {
+        toast.error('Please add or select a shipping address')
+        return
+      }
+      if (!allShippingSelected) {
+        toast.error('Select shipping for all items')
+        return
+      }
+      if (!razorpayReady || !window.Razorpay) {
+        toast.error('Payment gateway is still loading. Please wait a moment.')
+        return
+      }
+      if (cartTotals.total <= 0) {
+        toast.error('Order total must be greater than zero')
+        return
+      }
+
       setIsProcessingPayment(true)
-      if (!cart || cart.length === 0) throw new Error('Cart is empty')
-      if (!user?.buyerProfile?.id) throw new Error('User not valid')
-
-      const hasShipping = cart.every(
-        (item) => selectedShippingMethods[item.id || '']
-      )
-      if (!hasShipping) throw new Error('Select shipping for all items')
-
-      const hasAddress = user?.buyerProfile?.shippingAddresses?.some(
-        (addr: { isDefault: boolean }) => addr.isDefault
-      )
-      if (!hasAddress) throw new Error('No default address found')
 
       const orderData = await RazorPayOrder(cartTotals.total)
 
+      if (orderData.error) {
+        throw new Error(orderData.details || orderData.error)
+      }
+
+      const razorpayKey =
+        orderData.key || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID
+      if (!razorpayKey || !orderData.id) {
+        throw new Error('Payment could not be initialized. Please try again.')
+      }
+
       const options: RazorpayOptions = {
-        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID!,
+        key: razorpayKey,
         amount: orderData.amount,
         currency: orderData.currency,
         name: 'Ninja Bazaar',
@@ -300,7 +405,7 @@ const CheckoutPage = () => {
         prefill: {
           name: `${user.firstName} ${user.lastName}`,
           email: user.email || session?.user.email || '',
-          contact: user.contactNumber || '',
+          contact: user.contactNumber?.replace(/\D/g, '').slice(-10) || '',
         },
         theme: {
           color: '#16a34a',
@@ -314,13 +419,31 @@ const CheckoutPage = () => {
       }
 
       const razorpay = new window.Razorpay(options)
+      razorpay.on('payment.failed', (response) => {
+        const msg = response.error?.description || 'Payment failed'
+        setPaymentError(msg)
+        toast.error(msg)
+        setIsProcessingPayment(false)
+      })
+
+      setIsProcessingPayment(false)
       razorpay.open()
       // eslint-disable-next-line
     } catch (err: any) {
-      setPaymentError(err.message || 'Payment failed')
+      const msg = getCheckoutErrorMessage(err)
+      setPaymentError(msg)
+      toast.error(msg)
       setIsProcessingPayment(false)
     }
   }
+
+  const canPlaceOrder =
+    cart.length > 0 &&
+    Boolean(user) &&
+    Boolean(selectedAddress) &&
+    allShippingSelected &&
+    razorpayReady &&
+    !isProcessingPayment
 
   if (!isInitialized || isBuyerDetailsLoading || !session?.user.id) {
     return (
@@ -353,43 +476,14 @@ const CheckoutPage = () => {
                 </h1>
               </div>
 
-              {/* Shipping Address */}
-              <div className="border-b border-gray-200 pb-6 mb-6">
-                <div className="flex flex-row justify-between items-start mb-4">
-                  <div className="flex flex-row items-center gap-3">
-                    <MapPin className="w-6 h-6 text-gray-600" />
-                    <h2 className="text-xl font-semibold text-gray-900">
-                      Shipping Address
-                    </h2>
-                  </div>
-                  <button className="text-green-700 hover:text-green-800 text-lg font-medium hover:underline">
-                    Change
-                  </button>
-                </div>
-                <div className="ml-9 space-y-2">
-                  {user ? (
-                    <>
-                      <h3 className="text-lg font-medium text-gray-900">
-                        {user.firstName + ' ' + user.lastName}
-                      </h3>
-                      <div className="text-gray-700 leading-relaxed max-w-lg">
-                        {RenderShippingAddresses()}
-                      </div>
-                      <p className="text-gray-700">
-                        {user.contactNumber
-                          ? formatPhoneNumber(user.contactNumber)
-                          : ''}
-                      </p>
-                    </>
-                  ) : (
-                    <div className="space-y-2">
-                      <div className="h-6 bg-gray-200 rounded animate-pulse"></div>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-3/4"></div>
-                      <div className="h-4 bg-gray-200 rounded animate-pulse w-1/2"></div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <CheckoutAddressSelector
+                addresses={addresses}
+                selectedAddressId={selectedAddressId}
+                onSelectAddress={setSelectedAddressId}
+                onAddressSaved={handleAddressSaved}
+                userName={`${user?.firstName || ''} ${user?.lastName || ''}`.trim()}
+                contactNumber={user?.contactNumber}
+              />
 
               {/* Payment Method */}
               <div className="border-b border-gray-200 pb-6 mb-6">
@@ -459,9 +553,11 @@ const CheckoutPage = () => {
                   </h2>
                 </div>
 
-                {cart.map((item, index) => (
+                {cart.map((item, index) => {
+                  const itemKey = getCartItemKey(item)
+                  return (
                   <div
-                    key={index}
+                    key={itemKey || index}
                     className="flex flex-col sm:flex-row gap-6 p-4 border border-gray-200 rounded-lg my-2 shadow-md"
                   >
                     <div className="flex gap-4 flex-1">
@@ -511,12 +607,12 @@ const CheckoutPage = () => {
                           item.product.shippingMethods.length > 0 ? (
                             <Select
                               value={
-                                selectedShippingMethods[item.id || '']?.name ||
+                                selectedShippingMethods[itemKey]?.name ||
                                 ''
                               }
                               onValueChange={(value) =>
                                 handleShippingMethodChange(
-                                  item.id || '',
+                                  itemKey,
                                   value,
                                   item
                                 )
@@ -547,19 +643,18 @@ const CheckoutPage = () => {
                             </Select>
                           ) : (
                             <p className="text-gray-500 italic">
-                              No shipping options available
+                              Standard shipping (free) will be applied
                             </p>
                           )}
 
-                          {/* Display selected shipping method */}
-                          {selectedShippingMethods[item.id || ''] && (
+                          {selectedShippingMethods[itemKey] && (
                             <div className="mt-2 p-2 bg-green-50 border border-green-200 rounded">
                               <p className="text-sm text-green-800">
                                 Selected:{' '}
-                                {selectedShippingMethods[item.id || ''].name} -
+                                {selectedShippingMethods[itemKey].name} -
                                 <CurrencyFormatter
                                   amount={
-                                    selectedShippingMethods[item.id || ''].price
+                                    selectedShippingMethods[itemKey].price
                                   }
                                 />
                               </p>
@@ -569,7 +664,8 @@ const CheckoutPage = () => {
                       </div>
                     </div>
                   </div>
-                ))}
+                  )
+                })}
               </div>
             </div>
           </div>
@@ -610,14 +706,10 @@ const CheckoutPage = () => {
               </div>
 
               <button
+                type="button"
                 onClick={handlePlaceOrder}
                 className="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-4 px-6 rounded-full flex items-center justify-center gap-3 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={
-                  !cart ||
-                  !user ||
-                  isProcessingPayment ||
-                  cart.some((item) => !selectedShippingMethods[item.id || ''])
-                }
+                disabled={!canPlaceOrder}
               >
                 {isProcessingPayment ? (
                   <>
@@ -631,6 +723,20 @@ const CheckoutPage = () => {
                   </>
                 )}
               </button>
+
+              {!selectedAddress && user && (
+                <p className="mt-3 text-sm text-red-600 text-center">
+                  Add or select a shipping address to continue.
+                </p>
+              )}
+              {paymentError && (
+                <p className="mt-3 text-sm text-red-600 text-center">{paymentError}</p>
+              )}
+              {!razorpayReady && (
+                <p className="mt-3 text-sm text-gray-500 text-center">
+                  Loading payment gateway...
+                </p>
+              )}
             </div>
           </div>
         </div>

@@ -1,52 +1,42 @@
 import prisma from '@/lib/prisma'
 import { NextResponse } from 'next/server'
+import { getAuthenticatedSellerProfile } from '@/lib/seller-auth'
+import { normalizeOrderStatus } from '@/lib/order-status'
 
 export async function GET(request: Request) {
   try {
-    const { searchParams } = new URL(request.url)
-    const sellerId = searchParams.get('sellerId')
-    const status = searchParams.get('status') // Optional status filter
-    const page = parseInt(searchParams.get('page') || '1')
-    const limit = parseInt(searchParams.get('limit') || '10')
-
-    // Check if sellerId is provided
-    if (!sellerId) {
-      return NextResponse.json(
-        { message: 'Seller ID is required' },
-        { status: 400 }
-      )
+    const sellerProfile = await getAuthenticatedSellerProfile()
+    if (!sellerProfile) {
+      return NextResponse.json({ message: 'Unauthorized' }, { status: 401 })
     }
 
-    // Calculate skip for pagination
+    const { searchParams } = new URL(request.url)
+    const status = searchParams.get('status')
+    const page = parseInt(searchParams.get('page') || '1')
+    const limit = parseInt(searchParams.get('limit') || '10')
+    const sellerId = sellerProfile.id
     const skip = (page - 1) * limit
 
-    // Build where clause
-    // eslint-disable-next-line
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const whereClause: any = {
       orderItems: {
         some: {
-          product: {
-            sellerId: sellerId,
-          },
+          OR: [{ sellerId }, { product: { sellerId } }],
         },
       },
     }
 
-    // Add status filter if provided
-    if (status) {
-      whereClause.status = status
+    if (status && status !== 'all') {
+      whereClause.status = normalizeOrderStatus(status)
     }
 
-    // Get orders with related data
     const [orders, totalCount] = await Promise.all([
       prisma.order.findMany({
         where: whereClause,
         include: {
           orderItems: {
             where: {
-              product: {
-                sellerId: sellerId,
-              },
+              OR: [{ sellerId }, { product: { sellerId } }],
             },
             include: {
               product: {
@@ -106,17 +96,14 @@ export async function GET(request: Request) {
         orderBy: {
           createdAt: 'desc',
         },
-        skip: skip,
+        skip,
         take: limit,
       }),
-
-      // Get total count for pagination
       prisma.order.count({
         where: whereClause,
       }),
     ])
 
-    // Calculate seller-specific totals for each order
     const ordersWithSellerTotals = orders.map((order) => {
       const sellerOrderItems = order.orderItems
       const sellerTotal = sellerOrderItems.reduce((sum, item) => {
@@ -129,15 +116,12 @@ export async function GET(request: Request) {
 
       return {
         ...order,
-        sellerTotal: sellerTotal,
+        sellerTotal,
         sellerItemCount: sellerOrderItems.length,
       }
     })
 
-    // Calculate pagination info
     const totalPages = Math.ceil(totalCount / limit)
-    const hasNextPage = page < totalPages
-    const hasPrevPage = page > 1
 
     return NextResponse.json(
       {
@@ -146,8 +130,8 @@ export async function GET(request: Request) {
           currentPage: page,
           totalPages,
           totalCount,
-          hasNextPage,
-          hasPrevPage,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1,
           limit,
         },
       },

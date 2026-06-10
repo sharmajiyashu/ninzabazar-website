@@ -1,5 +1,6 @@
 import { prisma } from '@/lib/prisma'
 import { NextRequest, NextResponse } from 'next/server'
+import { ORDER_STATUSES } from '@/lib/order-status'
 
 export async function GET(req: NextRequest) {
   const token = req.nextUrl.searchParams.get('token')
@@ -11,13 +12,13 @@ export async function GET(req: NextRequest) {
 
   const updated = await prisma.order.updateMany({
     where: {
-      status: 'delivered',
+      status: ORDER_STATUSES.DELIVERED,
       deliveryVerifiedAt: {
         lte: oneWeekAgo,
       },
     },
     data: {
-      status: 'completed',
+      status: ORDER_STATUSES.COMPLETED,
     },
   })
 

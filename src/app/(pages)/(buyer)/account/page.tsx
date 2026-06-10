@@ -3,7 +3,8 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import axios from 'axios'
-import AccountTabs from './components/account-tabs'
+import { ProfileBreadcrumb } from './components/profile-breadcrumb'
+import { ProfileForm } from './components/profile-form'
 import { UserProps } from '@/app/types/type'
 
 export default function BuyerAccountPage() {
@@ -35,32 +36,36 @@ export default function BuyerAccountPage() {
 
   if (status === 'loading' || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        Loading...
+      <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-gray-200 bg-white">
+        <p className="text-gray-500">Loading profile...</p>
       </div>
     )
   }
 
   if (!session || !userData) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        Unable to load account. Please try again.
+      <div className="flex min-h-[320px] items-center justify-center rounded-xl border border-gray-200 bg-white">
+        <p className="text-gray-500">Unable to load account. Please try again.</p>
       </div>
     )
   }
 
-  const formattedData = {
-    name: `${userData.firstName} ${userData.lastName}`,
-    email: userData.email,
-    phoneNumber: userData.contactNumber,
-    dateOfBirth: userData.dateOfBirth ?? '',
-    addresses:
-      userData.buyerProfile?.shippingAddresses?.map((address) => ({
-        id: address.id,
-        address: `${address.street}, ${address.city}, ${address.state} ${address.postalCode}, ${address.country}`,
-        label: address.isDefault ? 'Home' : 'Other',
-      })) ?? [],
-  }
+  const defaultAddress = userData.buyerProfile?.shippingAddresses?.find(
+    (a) => a.isDefault
+  )
+  const location = defaultAddress
+    ? `${defaultAddress.city}, ${defaultAddress.state}`
+    : 'Not set'
 
-  return <AccountTabs {...formattedData} />
+  return (
+    <>
+      <ProfileBreadcrumb items={[{ label: 'Profile' }]} />
+      <ProfileForm
+        name={`${userData.firstName} ${userData.lastName}`.trim()}
+        email={userData.email}
+        phoneNumber={userData.contactNumber}
+        location={location}
+      />
+    </>
+  )
 }

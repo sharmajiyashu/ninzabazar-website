@@ -111,6 +111,7 @@ export const config = {
     '/verification-success',
     '/verification-failed',
     '/account',
+    '/account/:path*',
     '/cart',
     '/checkout',
     '/orders',

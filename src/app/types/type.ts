@@ -67,6 +67,7 @@ export interface UserProps {
       postalCode: string
       country: string
       isDefault: boolean
+      label?: string
     }>
   }
 }
@@ -290,6 +291,7 @@ export interface CartItem {
   images: string
   sellerId?: string
   product?: {
+    sellerId?: string
     seller: {
       id: string
     }
@@ -415,28 +417,40 @@ export interface UserAddress {
   country?: string
 }
 
-export interface OrdersPageProps {
+export interface BuyerOrderItem {
+  id: string
+  productId: string
+  name: string
+  quantity: number
+  price: number
+  image: string
+  variantTitle?: string
+  variantOption?: string
+}
+
+export interface BuyerOrderSummary {
+  id: string
+  status: string
+  createdAt: string
+  trackingLink: string
+  totalAmount: number
+  itemCount: number
   store: {
-    storeId: string
-    storeName: string
-  }[]
-  order: {
-    orderItemId: string
-    orderId: string
-    orderTitle: string
-    orderDetails: string
-    orderQty: number
-    orderPrice: number
-    orderImg: string
-    statusType: string // ✅ Fix this
-    storeId: string
-    productId: string
-  }[]
-  orderStatus: {
-    statusType: string
-    label: string
-  }[]
-  statusFilter: string
+    id: string
+    name: string
+  }
+  items: BuyerOrderItem[]
+  shippingAddress: {
+    street: string
+    city: string
+    state: string
+    postalCode: string
+    country: string
+  } | null
+}
+
+export interface OrdersPageProps {
+  orders: BuyerOrderSummary[]
 }
 
 export interface OrderItem {
@@ -467,6 +481,7 @@ export interface Order {
   id: string
   status: string
   createdAt: string
+  trackingLink?: string
   sellerTotal: number
   sellerItemCount: number
   orderItems: OrderItem[]

@@ -3,6 +3,7 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
 import { ORDER_STATUSES } from '@/lib/order-status'
+import { verifyRazorpayPaymentSignature } from '@/lib/razorpay'
 
 export async function POST(request: Request) {
   try {
@@ -19,6 +20,7 @@ export async function POST(request: Request) {
       paymentId,
       orderId,
       shippingAddress,
+      razorpay_signature,
     } = await request.json()
 
     const buyerProfile = await prisma.buyerProfile.findUnique({
@@ -38,6 +40,62 @@ export async function POST(request: Request) {
 
     if (!totalAmount || totalAmount <= 0) {
       return NextResponse.json({ error: 'Invalid total amount' }, { status: 400 })
+    }
+
+    if (!paymentId || !orderId || !razorpay_signature) {
+      return NextResponse.json(
+        { error: 'Payment verification data is required' },
+        { status: 400 }
+      )
+    }
+
+    const isPaymentValid = verifyRazorpayPaymentSignature(
+      orderId,
+      paymentId,
+      razorpay_signature
+    )
+
+    if (!isPaymentValid) {
+      return NextResponse.json(
+        { error: 'Invalid payment signature' },
+        { status: 400 }
+      )
+    }
+
+    const existingOrder = await prisma.order.findFirst({
+      where: { razorpayOrderId: orderId },
+      include: {
+        orderItems: {
+          include: {
+            product: { select: { id: true, name: true, images: true } },
+          },
+        },
+        shippingAddress: true,
+        buyer: {
+          select: {
+            id: true,
+            userId: true,
+            profilePicture: true,
+            user: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+                contactNumber: true,
+              },
+            },
+          },
+        },
+      },
+    })
+
+    if (existingOrder) {
+      return NextResponse.json({
+        success: true,
+        message: 'Order already exists',
+        orderId: existingOrder.id,
+        order: existingOrder,
+      })
     }
 
     let addressId: string | null = null
@@ -62,9 +120,23 @@ export async function POST(request: Request) {
       }
     }
 
+    const productIds = items
+      .map(
+        (item: { productId?: string; id?: string }) => item.productId || item.id
+      )
+      .filter((id: string | undefined): id is string => Boolean(id))
+    const products = await prisma.product.findMany({
+      where: { id: { in: productIds } },
+      select: { id: true, sellerId: true },
+    })
+    const sellerByProduct = Object.fromEntries(
+      products.map((product) => [product.id, product.sellerId])
+    )
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const orderItemsData = items.map((item: any, index: number) => {
       const itemShippingMethod = shippingMethods?.[item.id]
+      const productId = item.productId || item.id
 
       let priceAtPurchase = 0
 
@@ -86,11 +158,18 @@ export async function POST(request: Request) {
         ? item.variantCombination
         : []
 
+      const sellerId =
+        item.sellerId || sellerByProduct[productId] || null
+
+      if (!sellerId) {
+        throw new Error(`Seller not found for product ${productId}`)
+      }
+
       return {
-        sellerId: item.sellerId || null,
+        sellerId,
         quantity: item.quantity || 1,
         priceAtPurchase,
-        productId: item.productId || item.id,
+        productId,
         productName: item.productName || item.name || 'Unknown Product',
         variantId: item.variantId || null,
         variantCombination,
@@ -102,12 +181,6 @@ export async function POST(request: Request) {
     })
 
     const firstItemSellerId = orderItemsData[0]?.sellerId
-    if (!firstItemSellerId) {
-      return NextResponse.json(
-        { error: 'Seller information not found in order items' },
-        { status: 400 }
-      )
-    }
 
     const createOrder = await prisma.$transaction(async (tx) => {
       const order = await tx.order.create({

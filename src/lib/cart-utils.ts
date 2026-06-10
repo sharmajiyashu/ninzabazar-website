@@ -1,4 +1,12 @@
+import { CartItem } from '@/app/types/type'
+
 export const COLOR_VARIANT_PREFIX = 'color:'
+
+export function getCartItemKey(item: CartItem): string {
+  if (item.id) return item.id
+  const variants = (item.variantCombination || []).slice().sort().join('|')
+  return `${item.productId}:${variants || 'default'}`
+}
 
 export function buildVariantCombination(
   selectedVariants: Record<string, string>,

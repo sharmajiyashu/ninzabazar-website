@@ -24,6 +24,7 @@ export const ROUTES = {
     checkout: '/checkout',
     success: '/success',
     account: '/account',
+    accountDashboard: '/account/dashboard',
     orders: '/orders',
     messages: '/messages',
   },

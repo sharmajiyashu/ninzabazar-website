@@ -60,6 +60,7 @@ export const MIDDLEWARE_MATCHER: string[] = [
   ROUTES.auth.verificationSuccess,
   ROUTES.auth.verificationFailed,
   ROUTES.buyer.account,
+  `${ROUTES.buyer.account}/:path*`,
   ROUTES.buyer.cart,
   ROUTES.buyer.checkout,
   ROUTES.buyer.orders,
@@ -93,7 +94,11 @@ export function isEmailVerifyPath(pathname: string): boolean {
 }
 
 export function isBuyerProtectedRoute(pathname: string): boolean {
-  return BUYER_PROTECTED_ROUTES.includes(normalizePath(pathname))
+  const path = normalizePath(pathname)
+  if (path === ROUTES.buyer.account || path.startsWith(`${ROUTES.buyer.account}/`)) {
+    return true
+  }
+  return BUYER_PROTECTED_ROUTES.includes(path)
 }
 
 export function matchesPath(pathname: string, route: string): boolean {

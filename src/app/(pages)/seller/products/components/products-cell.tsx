@@ -22,6 +22,7 @@ import Image from 'next/image'
 import CurrencyFormatter from '@/app/components/ui-utils/currency-format'
 import axios from 'axios'
 import { toast } from 'sonner'
+import { openFromDropdown } from '@/lib/radix-ui-fixes'
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -246,6 +247,7 @@ export const ActionsCell = ({
   onDeleted?: () => void
 }) => {
   const router = useRouter()
+  const [menuOpen, setMenuOpen] = useState(false)
   const [openDelete, setOpenDelete] = useState(false)
   const [isDeleting, setIsDeleting] = useState(false)
   const [isTogglingActive, setIsTogglingActive] = useState(false)
@@ -309,8 +311,7 @@ export const ActionsCell = ({
   return (
     <>
       <div className="flex items-center gap-2">
-        {/* Actions Dropdown */}
-        <DropdownMenu>
+        <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen} modal={false}>
           <DropdownMenuTrigger asChild>
             <Button
               variant="ghost"
@@ -326,9 +327,13 @@ export const ActionsCell = ({
             align="center"
             className="w-48 shadow-lg border border-gray-200"
           >
-            {/* Edit Action */}
             <DropdownMenuItem
-              onClick={() => router.push(`/seller/post?edit=${product.id}`)}
+              onSelect={(event) => {
+                event.preventDefault()
+                openFromDropdown(() => setMenuOpen(false), () =>
+                  router.push(`/seller/post?edit=${product.id}`)
+                )
+              }}
               className="flex items-center gap-2 cursor-pointer hover:bg-blue-50 focus:bg-blue-50 group"
             >
               <Edit3 className="h-4 w-4 text-blue-500 group-hover:text-blue-600" />
@@ -337,9 +342,13 @@ export const ActionsCell = ({
               </span>
             </DropdownMenuItem>
 
-            {/* Toggle Visibility Action */}
             <DropdownMenuItem
-              onClick={handleToggleActive}
+              onSelect={(event) => {
+                event.preventDefault()
+                openFromDropdown(() => setMenuOpen(false), () => {
+                  void handleToggleActive()
+                })
+              }}
               disabled={isTogglingActive || !approved}
               className="flex items-center gap-2 cursor-pointer hover:bg-amber-50 focus:bg-amber-50 group disabled:opacity-50 disabled:cursor-not-allowed"
             >
@@ -365,9 +374,11 @@ export const ActionsCell = ({
 
             <DropdownMenuSeparator className="bg-gray-200" />
 
-            {/* Delete Action */}
             <DropdownMenuItem
-              onClick={() => setOpenDelete(true)}
+              onSelect={(event) => {
+                event.preventDefault()
+                openFromDropdown(() => setMenuOpen(false), () => setOpenDelete(true))
+              }}
               className="flex items-center gap-2 cursor-pointer hover:bg-red-50 focus:bg-red-50 group"
             >
               <Trash2 className="h-4 w-4 text-red-500 group-hover:text-red-600" />
@@ -379,7 +390,7 @@ export const ActionsCell = ({
         </DropdownMenu>
       </div>
 
-      {/* Enhanced Delete Confirmation Modal */}
+      {openDelete && (
       <Dialog open={openDelete} onOpenChange={setOpenDelete}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader className="space-y-3">
@@ -438,6 +449,7 @@ export const ActionsCell = ({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      )}
     </>
   )
 }

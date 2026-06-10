@@ -15,16 +15,29 @@ import { Textarea } from '@/components/ui/textarea'
 import { Order } from '@/app/types/type'
 import axios from 'axios'
 import { toast } from 'sonner'
+import { useQueryClient } from '@tanstack/react-query'
 
 interface CancelOrderDialogProps {
   order: Order
-  trigger?: React.ReactNode // Optional custom trigger, default to button
+  trigger?: React.ReactNode
+  open?: boolean
+  onOpenChange?: (open: boolean) => void
+  onSuccess?: () => void
 }
 
-const CancelOrderDialog = ({ order, trigger }: CancelOrderDialogProps) => {
-  const [open, setOpen] = useState(false)
+const CancelOrderDialog = ({
+  order,
+  trigger,
+  open: controlledOpen,
+  onOpenChange: controlledOnOpenChange,
+  onSuccess,
+}: CancelOrderDialogProps) => {
+  const [internalOpen, setInternalOpen] = useState(false)
+  const open = controlledOpen ?? internalOpen
+  const setOpen = controlledOnOpenChange ?? setInternalOpen
   const [reason, setReason] = useState('')
   const [loading, setLoading] = useState(false)
+  const queryClient = useQueryClient()
 
   const handleCancelOrder = async () => {
     try {
@@ -34,6 +47,9 @@ const CancelOrderDialog = ({ order, trigger }: CancelOrderDialogProps) => {
         reason,
       })
       toast.success('Order cancelled successfully.')
+      await queryClient.invalidateQueries({ queryKey: ['seller-orders'] })
+      await queryClient.invalidateQueries({ queryKey: ['seller-order-stats'] })
+      onSuccess?.()
       setOpen(false)
     } catch (error) {
       console.log(error)
@@ -45,16 +61,7 @@ const CancelOrderDialog = ({ order, trigger }: CancelOrderDialogProps) => {
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
-      <DialogTrigger asChild>
-        {trigger || (
-          <Button
-            variant="ghost"
-            className="text-red-600 hover:text-red-700 w-full text-left"
-          >
-            Cancel Order
-          </Button>
-        )}
-      </DialogTrigger>
+      {trigger ? <DialogTrigger asChild>{trigger}</DialogTrigger> : null}
 
       <DialogContent>
         <DialogHeader>

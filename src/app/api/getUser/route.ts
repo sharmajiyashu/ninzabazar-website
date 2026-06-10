@@ -67,6 +67,7 @@ export async function GET(req: Request) {
                 postalCode: true,
                 country: true,
                 isDefault: true,
+                label: true,
                 createdAt: true,
                 updatedAt: true,
               },

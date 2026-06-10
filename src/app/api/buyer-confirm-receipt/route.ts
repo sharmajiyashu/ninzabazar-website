@@ -2,7 +2,11 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/authOptions'
-import { ORDER_STATUSES } from '@/lib/order-status'
+import {
+  ORDER_STATUSES,
+  canBuyerConfirmReceipt,
+} from '@/lib/order-status'
+import { releaseOrderEscrow } from '@/lib/order-escrow'
 
 export async function PUT(req: NextRequest) {
   try {
@@ -37,6 +41,13 @@ export async function PUT(req: NextRequest) {
       return NextResponse.json({ error: 'Order is cancelled' }, { status: 400 })
     }
 
+    if (!canBuyerConfirmReceipt(order.status)) {
+      return NextResponse.json(
+        { error: 'Order must be shipped before confirming receipt' },
+        { status: 400 }
+      )
+    }
+
     const now = new Date()
 
     await prisma.$transaction(async (tx) => {
@@ -48,36 +59,7 @@ export async function PUT(req: NextRequest) {
         },
       })
 
-      const escrow = order.EscrowPayment
-      if (escrow && escrow.status === 'HELD' && !order.isPaymentReleased) {
-        await tx.escrowPayment.update({
-          where: { id: escrow.id },
-          data: { status: 'RELEASED', releasedAt: now },
-        })
-
-        await tx.order.update({
-          where: { id: orderId },
-          data: { isPaymentReleased: true },
-        })
-
-        await tx.sellerWallet.upsert({
-          where: { sellerId: escrow.sellerId },
-          update: {
-            balance: { increment: Number(escrow.amount) },
-            availableBalance: { increment: Number(escrow.amount) },
-            updatedAt: now,
-          },
-          create: {
-            id: `wallet_${Date.now()}`,
-            sellerId: escrow.sellerId,
-            balance: Number(escrow.amount),
-            availableBalance: Number(escrow.amount),
-            pendingBalance: 0,
-            createdAt: now,
-            updatedAt: now,
-          },
-        })
-      }
+      await releaseOrderEscrow(tx, order, now)
     })
 
     return NextResponse.json({ message: 'Order marked as delivered' })

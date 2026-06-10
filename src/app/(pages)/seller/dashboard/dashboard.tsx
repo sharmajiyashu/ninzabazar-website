@@ -12,6 +12,7 @@ import { UserProps } from '@/app/types/type'
 import { formatPhoneNumber } from '@/lib/phoneNumFormatter'
 import CompanyDetails from './company-details'
 import BusinessInformation from './business-information'
+import SellerOrderSummary from './components/seller-order-summary'
 
 const Dashboard = () => {
   const [isUpdating, setIsUpdating] = useState(false)
@@ -256,6 +257,8 @@ const Dashboard = () => {
           </button>
         </div>
       </div>
+
+      <SellerOrderSummary />
 
       <div className="border-disablegrey rounded-2xl border-2 w-full p-4 md:p-10 mt-4">
         {activeComponent === 'basic details' && <CompanyDetails />}

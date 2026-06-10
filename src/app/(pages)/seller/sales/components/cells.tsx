@@ -12,6 +12,7 @@ import { Badge } from '@/components/ui/badge'
 import { format } from 'date-fns'
 import Image from 'next/image'
 import { Order } from '@/app/types/type'
+import { ORDER_STATUSES } from '@/lib/order-status'
 import CurrencyFormatter from '@/app/components/ui-utils/currency-format'
 import WaybillDownload from './waybill-download'
 import OrderDetailsModal from './order-detail-modal'
@@ -202,14 +203,16 @@ export const ActionsCell = ({ order }: { order: Order }) => {
   const [openDetails, setOpenDetails] = useState(false)
   const [openUpdateStatus, setOpenUpdateStatus] = useState(false)
 
-  const status = order.status.toLowerCase()
+  const status = order.status.toUpperCase()
 
   const handleViewOrder = () => setOpenDetails(true)
   const handleUpdateStatus = () => setOpenUpdateStatus(true)
 
-  const showCancel = status === 'pending'
-  const showUpdateStatus = status === 'processing'
-  const showWaybill = ['pending', 'processing', 'shipped'].includes(status)
+  const showCancel = status === ORDER_STATUSES.PROCESSING
+  const showUpdateStatus = status === ORDER_STATUSES.PROCESSING
+  const showWaybill = (
+    [ORDER_STATUSES.PROCESSING, ORDER_STATUSES.SHIPPED] as string[]
+  ).includes(status)
 
   return (
     <>

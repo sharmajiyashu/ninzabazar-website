@@ -1,31 +1,20 @@
 'use client'
 import React, { useEffect, useRef, useState } from 'react'
-import { User, ShoppingCart, Search, ChevronDown } from 'lucide-react'
+import { User, ShoppingCart, Search } from 'lucide-react'
 
 import Link from 'next/link'
-import { signOutAsBuyer } from '@/lib/auth-actions'
-import { useSession } from 'next-auth/react'
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu'
-import Avatar from '@mui/material/Avatar'
-import Image from 'next/image'
 import axios from 'axios'
+import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import useCartStore from '../store/cart-store'
 import { CartItem, UserProps } from '../types/type'
 import { useQuery } from '@tanstack/react-query'
 import { ROUTES, productsPath } from '@/lib/routes'
+import { BuyerProfileMenu } from './buyer-profile-menu'
 
 const NavBar = () => {
   const cart = useCartStore((state) => state.cart)
 
-  const [desktopMenuOpen, setDesktopMenuOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [showDropdown, setShowDropdown] = useState(false)
   const [searchResults, setSearchResults] = useState<string[]>([])
@@ -37,8 +26,9 @@ const NavBar = () => {
   const { data: user } = useQuery<UserProps>({
     queryKey: ['user', session?.user.id],
     queryFn: async () => {
-      const res = await axios.get(`/api/getUser?id=${session?.user.id}`)
-      return res.data
+      const res = await fetch(`/api/getUser?id=${session?.user.id}`)
+      if (!res.ok) throw new Error('Failed to fetch user')
+      return res.json()
     },
     enabled: !!session?.user?.id,
   })
@@ -164,48 +154,12 @@ const NavBar = () => {
                 <User size={16} />
               </Link>
             ) : (
-              <DropdownMenu
-                open={desktopMenuOpen}
-                onOpenChange={setDesktopMenuOpen}
-              >
-                <DropdownMenuTrigger asChild>
-                  <button type="button" className="flex items-center gap-1">
-                    <Avatar sx={{ width: 36, height: 36 }}>
-                      <Image
-                        width={36}
-                        height={36}
-                        src={user?.profilePicture || '/default-user-img.jpg'}
-                        alt="User"
-                      />
-                    </Avatar>
-                    <ChevronDown className="h-4 w-4 text-gray-600" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="z-50 w-44 rounded-lg border border-gray-200 bg-white py-2 shadow-lg"
-                >
-                  <DropdownMenuLabel className="px-4 py-2 font-semibold text-gray-700">
-                    Welcome {session.user?.name}!
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <Link href={ROUTES.buyer.account}>
-                    <DropdownMenuItem>Profile</DropdownMenuItem>
-                  </Link>
-                  <Link href={ROUTES.buyer.messages}>
-                    <DropdownMenuItem>Messages</DropdownMenuItem>
-                  </Link>
-                  <Link href={ROUTES.buyer.orders}>
-                    <DropdownMenuItem>Orders</DropdownMenuItem>
-                  </Link>
-                  <DropdownMenuItem
-                    onClick={() => void signOutAsBuyer()}
-                    className="text-red-600"
-                  >
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <BuyerProfileMenu
+                menuId="buyer-profile-menu-mobile"
+                userName={session.user?.name}
+                profilePicture={user?.profilePicture}
+                avatarSize={36}
+              />
             )}
           </div>
         </div>
@@ -320,60 +274,12 @@ const NavBar = () => {
                 <span className="hidden lg:inline">Login/Sign up</span>
               </Link>
             ) : (
-              <DropdownMenu
-                open={desktopMenuOpen}
-                onOpenChange={setDesktopMenuOpen}
-              >
-                <DropdownMenuTrigger asChild>
-                  <button
-                    type="button"
-                    className="relative flex cursor-pointer items-center gap-2"
-                  >
-                    <Avatar
-                      sx={{ width: 40, height: 40 }}
-                      className="rounded-full border-2 border-white shadow-md"
-                    >
-                      <Image
-                        width={40}
-                        height={40}
-                        src={user?.profilePicture || '/default-user-img.jpg'}
-                        alt="User"
-                      />
-                    </Avatar>
-                    <ChevronDown className="h-4 w-4 text-gray-600" />
-                  </button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent
-                  align="end"
-                  className="z-50 w-44 rounded-lg border border-gray-200 bg-white py-2 shadow-lg"
-                >
-                  <DropdownMenuLabel className="px-4 py-2 font-semibold text-gray-700">
-                    Welcome {session.user?.name}!
-                  </DropdownMenuLabel>
-                  <DropdownMenuSeparator />
-                  <Link href={ROUTES.buyer.account}>
-                    <DropdownMenuItem className="cursor-pointer px-4 py-2 text-gray-600 hover:bg-gray-100">
-                      Profile
-                    </DropdownMenuItem>
-                  </Link>
-                  <Link href={ROUTES.buyer.messages}>
-                    <DropdownMenuItem className="cursor-pointer px-4 py-2 text-gray-600 hover:bg-gray-100">
-                      Messages
-                    </DropdownMenuItem>
-                  </Link>
-                  <Link href={ROUTES.buyer.orders}>
-                    <DropdownMenuItem className="cursor-pointer px-4 py-2 text-gray-600 hover:bg-gray-100">
-                      Orders
-                    </DropdownMenuItem>
-                  </Link>
-                  <DropdownMenuItem
-                    onClick={() => void signOutAsBuyer()}
-                    className="cursor-pointer px-4 py-2 text-red-600"
-                  >
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <BuyerProfileMenu
+                menuId="buyer-profile-menu-desktop"
+                userName={session.user?.name}
+                profilePicture={user?.profilePicture}
+                avatarSize={40}
+              />
             )}
           </div>
         </div>

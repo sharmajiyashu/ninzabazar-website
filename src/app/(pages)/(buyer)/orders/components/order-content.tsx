@@ -1,25 +1,30 @@
 'use client'
 
 import React, { useEffect, useState } from 'react'
-import { OrdersPageProps, Conversation } from '@/app/types/type'
+import { BuyerOrderSummary, Conversation, OrdersPageProps } from '@/app/types/type'
 import { Button } from '@/components/ui/button'
 import Image from 'next/image'
-import { Store } from 'lucide-react'
+import { ExternalLink, MessageCircle, Package, Store } from 'lucide-react'
 import axios from 'axios'
 import { toast } from 'sonner'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { useQueryClient } from '@tanstack/react-query'
 import { useBuyerConversations } from '@/app/hooks/useConversation'
 import { ConfirmReceiptModal } from './order-confirm-modal'
 import { OrderDetailsModal } from './view-detail-modal'
 import { AddReviewModal } from './add-review-modal'
+import { OrderStatusBadge } from '@/components/order-status-badge'
+import CurrencyFormatter from '@/app/components/ui-utils/currency-format'
+import { format } from 'date-fns'
+import {
+  canBuyerConfirmReceipt,
+  canBuyerLeaveReview,
+} from '@/lib/order-status'
 
-const OrderContent: React.FC<OrdersPageProps> = ({
-  store = [],
-  order = [],
-  statusFilter,
-}) => {
+const OrderContent: React.FC<OrdersPageProps> = ({ orders = [] }) => {
   const router = useRouter()
+  const queryClient = useQueryClient()
   const { data: session } = useSession()
   const { data: conversations } = useBuyerConversations(
     session?.user.id as string
@@ -28,136 +33,59 @@ const OrderContent: React.FC<OrdersPageProps> = ({
   const [openConfirm, setOpenConfirm] = useState(false)
   const [openDetails, setOpenDetails] = useState(false)
   const [openReview, setOpenReview] = useState(false)
-  const [selectedOrder, setSelectedOrder] = useState<(typeof order)[0] | null>(
+  const [selectedOrder, setSelectedOrder] = useState<BuyerOrderSummary | null>(
+    null
+  )
+  const [selectedProductId, setSelectedProductId] = useState<string | null>(
     null
   )
   const [existingReviews, setExistingReviews] = useState<
     Record<string, boolean>
   >({})
 
-  // Move useEffect to the top level
   useEffect(() => {
     const fetchExistingReviews = async () => {
+      const productIds = [
+        ...new Set(orders.flatMap((o) => o.items.map((i) => i.productId))),
+      ]
+
+      if (!session?.user.id || productIds.length === 0) return
+
       try {
         const reviewChecks = await Promise.all(
-          order.map((item) =>
+          productIds.map((productId) =>
             axios
               .get('/api/review/existing', {
-                params: {
-                  productId: item.productId,
-                  userId: session?.user.id,
-                },
+                params: { productId, userId: session.user.id },
               })
               .then((res) => ({
-                productId: item.productId,
+                productId,
                 exists: res.data.review !== null,
               }))
           )
         )
 
-        const reviewMap = Object.fromEntries(
-          reviewChecks.map((r) => [r.productId, r.exists])
+        setExistingReviews(
+          Object.fromEntries(reviewChecks.map((r) => [r.productId, r.exists]))
         )
-
-        setExistingReviews(reviewMap)
       } catch (error) {
         console.error('Error fetching review statuses:', error)
       }
     }
 
-    if (session?.user.id && order.length > 0) {
-      fetchExistingReviews()
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [session?.user.id, order.length])
-
-  const getStoreName = (storeId: string) => {
-    const storeInfo = store.find((s) => s.storeId === storeId)
-    return storeInfo ? storeInfo.storeName : 'Unknown Store'
-  }
-
-  const statusMap: Record<string, string> = {
-    toShipOrders: 'processing',
-    toReceiveOrders: 'shipped',
-    completedOrders: 'completed',
-    cancelledOrders: 'cancelled',
-    orderReturns: 'returned',
-  }
-
-  const filterOrders = () => {
-    if (statusFilter === 'allOrders') return order
-    const targetStatus = statusMap[statusFilter]
-    return targetStatus
-      ? order.filter((o) => o.statusType === targetStatus)
-      : []
-  }
-
-  const groupedOrders = () => {
-    if (statusFilter !== 'allOrders') {
-      return { [statusFilter]: filterOrders() }
-    }
-    return {
-      all: order,
-    }
-  }
-
-  const getBuyerLabel = (status: string) => {
-    switch (status.toLowerCase()) {
-      case 'processing':
-        return 'To Ship'
-      case 'shipped':
-        return 'To Receive'
-      case 'delivered':
-        return 'Delivered'
-      case 'completed':
-        return 'Completed'
-      case 'cancelled':
-        return 'Cancelled'
-      case 'returned':
-        return 'Returned'
-      default:
-        return 'Unknown'
-    }
-  }
-
-  const StatusBadge = ({ statusType }: { statusType: string }) => {
-    const getStatusColor = () => {
-      switch (statusType.toLowerCase()) {
-        case 'processing':
-          return 'text-yellow'
-        case 'shipped':
-          return 'text-orange-500'
-        case 'delivered':
-          return 'text-blue-600'
-        case 'completed':
-          return 'text-green'
-        case 'cancelled':
-        case 'returned':
-          return 'text-red-500'
-        default:
-          return ''
-      }
-    }
-
-    return (
-      <span
-        className={`py-1 text-sm md:text-xl font-medium ${getStatusColor()}`}
-      >
-        {getBuyerLabel(statusType)}
-      </span>
-    )
-  }
+    fetchExistingReviews()
+  }, [session?.user.id, orders])
 
   const handleConfirmReceipt = async () => {
     if (!selectedOrder) return
 
     try {
       await axios.put('/api/buyer-confirm-receipt', {
-        orderId: selectedOrder.orderId,
+        orderId: selectedOrder.id,
       })
       toast.success('Order confirmed. Payment released to seller.')
       setOpenConfirm(false)
-      router.refresh()
+      await queryClient.invalidateQueries({ queryKey: ['buyerOrders'] })
     } catch (error) {
       console.error(error)
       toast.error('Failed to confirm receipt.')
@@ -170,12 +98,10 @@ const OrderContent: React.FC<OrdersPageProps> = ({
     title: string
     comment: string
   }) => {
-    if (!selectedOrder) return
+    if (!selectedOrder || !selectedProductId) return
 
     try {
-      // Check if this is an update (existing review)
-      if (reviewData.id && existingReviews[selectedOrder.productId]) {
-        // Update existing review
+      if (reviewData.id && existingReviews[selectedProductId]) {
         await axios.put(`/api/review/${reviewData.id}`, {
           rating: reviewData.rating,
           title: reviewData.title,
@@ -183,20 +109,18 @@ const OrderContent: React.FC<OrdersPageProps> = ({
         })
         toast.success('Review updated!')
       } else {
-        // Create new review
         await axios.post('/api/review', {
           rating: reviewData.rating,
           title: reviewData.title,
           comment: reviewData.comment,
-          productId: selectedOrder.productId,
+          productId: selectedProductId,
         })
         toast.success('Review submitted!')
       }
 
-      // Refresh the existing reviews state
       setExistingReviews((prev) => ({
         ...prev,
-        [selectedOrder.productId]: true,
+        [selectedProductId]: true,
       }))
 
       setOpenReview(false)
@@ -206,9 +130,8 @@ const OrderContent: React.FC<OrdersPageProps> = ({
     }
   }
 
-  const handleMessageSeller = async (orderItem: (typeof order)[0]) => {
-    const storeInfo = store.find((s) => s.storeId === orderItem.storeId)
-    const sellerId = storeInfo?.storeId
+  const handleMessageSeller = async (order: BuyerOrderSummary) => {
+    const sellerId = order.store.id
 
     if (!sellerId) {
       toast.error('Seller not found.')
@@ -219,144 +142,175 @@ const OrderContent: React.FC<OrdersPageProps> = ({
       (conv: Conversation) => conv.seller?.id === sellerId
     )
 
+    const firstProduct = order.items[0]
+
     if (existingConversation) {
       router.push(`/messages?xcnv=${existingConversation.id}`)
     } else {
       router.push(
-        `/messages?sellerId=${sellerId}&productId=${orderItem.productId}&companyName=${encodeURIComponent(
-          storeInfo?.storeName ?? 'ShopNameNull'
-        )}&productName=${encodeURIComponent(
-          orderItem.orderTitle ?? 'ProductNull'
-        )}`
+        `/messages?sellerId=${sellerId}&productId=${firstProduct?.productId}&companyName=${encodeURIComponent(
+          order.store.name
+        )}&productName=${encodeURIComponent(firstProduct?.name ?? 'Product')}`
       )
     }
   }
 
-  const handleViewStore = (orderItem: (typeof order)[0]) => {
-    router.push(`/store/${orderItem.storeId}`)
-  }
+  const renderOrderCard = (order: BuyerOrderSummary) => {
+    const firstItem = order.items[0]
+    const extraCount = order.items.length - 1
 
-  const renderOrder = (orderItem: (typeof order)[0]) => {
     return (
-      <div key={orderItem.orderItemId} className="px-4 py-6 mb-4 border-b">
-        <div className="flex flex-col md:flex-row items-start md:items-center justify-between mb-4">
-          <h4 className="flex items-center text-base md:text-lg font-medium">
-            <Store className="w-5 h-5 mx-2" />
-            {getStoreName(orderItem.storeId)}
-            <Button
-              onClick={() => handleMessageSeller(orderItem)}
-              className="mx-2 md:mx-4 text-white border rounded-full bg-green border-green hover:text-green hover:bg-transparent"
-            >
-              Message Seller
-            </Button>
-            <Button
-              onClick={() => handleViewStore(orderItem)}
-              className="bg-transparent border rounded-full text-disabledgrey border-disabledgrey hover:text-white hover:bg-green hover:border-green"
-            >
-              View Store
-            </Button>
-          </h4>
-          <StatusBadge statusType={orderItem.statusType} />
+      <article
+        key={order.id}
+        className="rounded-xl border border-gray-200 bg-white overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+      >
+        <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3 bg-gray-50 border-b border-gray-100">
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <span className="font-mono text-gray-500">
+              #{order.id.slice(-8).toUpperCase()}
+            </span>
+            <span className="text-gray-400">·</span>
+            <span className="text-gray-600">
+              {format(new Date(order.createdAt), 'MMM d, yyyy')}
+            </span>
+            <span className="text-gray-400">·</span>
+            <span className="flex items-center gap-1 text-gray-700">
+              <Store className="h-3.5 w-3.5" />
+              {order.store.name}
+            </span>
+          </div>
+          <OrderStatusBadge status={order.status} />
         </div>
 
-        <div className="flex flex-col md:flex-row items-start md:items-center">
-          <div className="mr-0 md:mr-4 overflow-hidden w-20 h-20 md:w-26 md:h-26">
-            <Image
-              src={orderItem.orderImg}
-              alt={orderItem.orderTitle}
-              width={100}
-              height={100}
-              className="object-cover w-full h-full"
-            />
-          </div>
-          <div className="flex-1 mt-4 md:mt-0">
-            <p className="text-xs text-muted-foreground">
-              Order ID: {orderItem.orderId}
+        <div className="p-4 flex flex-col sm:flex-row gap-4">
+          {firstItem && (
+            <div className="w-20 h-20 rounded-lg overflow-hidden bg-gray-100 shrink-0">
+              <Image
+                src={firstItem.image}
+                alt={firstItem.name}
+                width={80}
+                height={80}
+                className="object-cover w-full h-full"
+              />
+            </div>
+          )}
+
+          <div className="flex-1 min-w-0">
+            <p className="font-medium text-gray-900 line-clamp-2">
+              {firstItem?.name || 'Order items'}
             </p>
-            <p className="font-medium">{orderItem.orderTitle}</p>
-            <p className="text-gray-600">{orderItem.orderDetails}</p>
-            <p className="text-gray-600">Qty: {orderItem.orderQty}</p>
+            {extraCount > 0 && (
+              <p className="text-xs text-gray-500 mt-0.5">
+                +{extraCount} more item{extraCount > 1 ? 's' : ''}
+              </p>
+            )}
+            <p className="text-sm text-gray-500 mt-1">
+              {order.itemCount} item{order.itemCount !== 1 ? 's' : ''} total
+            </p>
+            {order.trackingLink && (
+              <a
+                href={order.trackingLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 text-xs text-[#006d44] hover:underline mt-2"
+              >
+                Track shipment <ExternalLink className="h-3 w-3" />
+              </a>
+            )}
           </div>
-          <div className="text-right mt-4 md:mt-0">
-            <p className="font-medium">${orderItem.orderPrice.toFixed(2)}</p>
+
+          <div className="text-right shrink-0">
+            <p className="text-lg font-semibold text-gray-900">
+              <CurrencyFormatter amount={order.totalAmount} />
+            </p>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row justify-end mt-4 space-y-3 md:space-y-0 md:space-x-3">
-          {orderItem.statusType === 'shipped' && (
+        <div className="px-4 pb-4 flex flex-wrap gap-2 justify-end">
+          {canBuyerConfirmReceipt(order.status) && (
             <Button
-              className="px-6 text-white border rounded-full bg-green hover:bg-transparent hover:text-green border-green"
+              size="sm"
+              className="rounded-full bg-[#006d44] hover:bg-[#005a36] text-white"
               onClick={() => {
-                setSelectedOrder(orderItem)
+                setSelectedOrder(order)
                 setOpenConfirm(true)
               }}
             >
-              Order Received
+              Confirm Received
             </Button>
           )}
-          {orderItem.statusType === 'completed' && (
-            <Button
-              onClick={() => {
-                setSelectedOrder(orderItem)
-                setOpenReview(true)
-              }}
-              className="px-6 text-white border rounded-full bg-green hover:bg-transparent hover:text-green border-green"
-            >
-              {existingReviews[orderItem.productId]
-                ? 'Edit Review'
-                : 'Add Review'}
-            </Button>
-          )}
+
+          {canBuyerLeaveReview(order.status) &&
+            order.items.map((item) => (
+              <Button
+                key={item.productId}
+                size="sm"
+                variant="outline"
+                className="rounded-full border-[#006d44] text-[#006d44] hover:bg-[#006d44]/5"
+                onClick={() => {
+                  setSelectedOrder(order)
+                  setSelectedProductId(item.productId)
+                  setOpenReview(true)
+                }}
+              >
+                {existingReviews[item.productId]
+                  ? 'Edit Review'
+                  : 'Leave Review'}
+              </Button>
+            ))}
+
           <Button
+            size="sm"
+            variant="outline"
+            className="rounded-full"
+            onClick={() => handleMessageSeller(order)}
+          >
+            <MessageCircle className="h-3.5 w-3.5 mr-1.5" />
+            Message
+          </Button>
+
+          <Button
+            size="sm"
+            variant="outline"
+            className="rounded-full"
             onClick={() => {
-              setSelectedOrder(orderItem)
+              setSelectedOrder(order)
               setOpenDetails(true)
             }}
-            variant="outline"
-            className="border-gray-300 rounded-full"
           >
             View Details
           </Button>
         </div>
+      </article>
+    )
+  }
+
+  if (orders.length === 0) {
+    return (
+      <div className="rounded-xl border border-dashed border-gray-200 bg-gray-50 py-16 text-center">
+        <Package className="h-12 w-12 text-gray-300 mx-auto mb-4" />
+        <h3 className="text-lg font-semibold text-gray-700">No orders found</h3>
+        <p className="text-sm text-gray-500 mt-1 max-w-sm mx-auto">
+          Orders matching your filter will appear here.
+        </p>
+        <Button
+          className="mt-6 rounded-full bg-[#006d44] hover:bg-[#005a36]"
+          onClick={() => router.push('/products')}
+        >
+          Browse Products
+        </Button>
       </div>
     )
   }
 
-  const groups = groupedOrders()
+  const selectedProduct = selectedOrder?.items.find(
+    (i) => i.productId === selectedProductId
+  )
 
   return (
     <>
-      {Object.entries(groups).map(([category, categoryOrders]) => {
-        if (categoryOrders.length === 0) return null
+      <div className="space-y-4">{orders.map(renderOrderCard)}</div>
 
-        const title =
-          category === 'recent'
-            ? 'Recent Orders'
-            : category === 'completed'
-              ? 'Completed Orders'
-              : category === 'cancelled'
-                ? 'Cancelled/Returned Orders'
-                : 'Orders'
-
-        return (
-          <div key={category} className="p-4 md:p-6 mb-4 border-2 rounded-xl">
-            <h3 className="mb-4 text-lg md:text-xl font-semibold">{title}</h3>
-            {categoryOrders.map((orderItem) => renderOrder(orderItem))}
-          </div>
-        )
-      })}
-
-      {Object.values(groups).flat().length === 0 && (
-        <div className="p-4 md:p-6 border-2 rounded-xl">
-          <div className="py-10 text-center">
-            <h3 className="mb-2 text-lg md:text-xl font-semibold">
-              No Orders Found
-            </h3>
-          </div>
-        </div>
-      )}
-
-      {/* Modals */}
       <ConfirmReceiptModal
         open={openConfirm}
         onClose={() => setOpenConfirm(false)}
@@ -367,19 +321,18 @@ const OrderContent: React.FC<OrdersPageProps> = ({
         <OrderDetailsModal
           open={openDetails}
           onClose={() => setOpenDetails(false)}
-          orderItem={selectedOrder}
-          getBuyerLabel={getBuyerLabel}
+          order={selectedOrder}
         />
       )}
 
-      {selectedOrder && (
+      {selectedOrder && selectedProductId && (
         <AddReviewModal
           open={openReview}
           onClose={() => setOpenReview(false)}
           onSubmit={handleSubmitReview}
-          productName={selectedOrder.orderTitle}
+          productName={selectedProduct?.name || 'Product'}
           userId={session?.user.id}
-          productId={selectedOrder.productId}
+          productId={selectedProductId}
         />
       )}
     </>

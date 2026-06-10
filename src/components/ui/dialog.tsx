@@ -5,11 +5,38 @@ import * as DialogPrimitive from "@radix-ui/react-dialog"
 import { XIcon } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { releaseBodyInteractionLock } from "@/lib/radix-ui-fixes"
 
 function Dialog({
+  open,
+  onOpenChange,
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Root>) {
-  return <DialogPrimitive.Root data-slot="dialog" {...props} />
+  React.useEffect(() => {
+    if (open === false) {
+      const timeout = window.setTimeout(releaseBodyInteractionLock, 350)
+      return () => window.clearTimeout(timeout)
+    }
+  }, [open])
+
+  const handleOpenChange = React.useCallback(
+    (nextOpen: boolean) => {
+      onOpenChange?.(nextOpen)
+      if (!nextOpen) {
+        window.setTimeout(releaseBodyInteractionLock, 350)
+      }
+    },
+    [onOpenChange]
+  )
+
+  return (
+    <DialogPrimitive.Root
+      data-slot="dialog"
+      open={open}
+      onOpenChange={onOpenChange ? handleOpenChange : undefined}
+      {...props}
+    />
+  )
 }
 
 function DialogTrigger({
