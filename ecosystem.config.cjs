@@ -1,17 +1,13 @@
 const path = require('path')
 require('dotenv').config({ path: path.join(__dirname, '.env') })
 
-const { resolveAppPort } = require('./scripts/resolve-port.cjs')
-
-const appPort = resolveAppPort()
-const appName = process.env.PM2_APP_NAME || 'ninjabazaar'
-
-console.log(`[PM2] App will run on port ${appPort}`)
+const { getPorts } = require('./scripts/ports.cjs')
+const { publicPort } = getPorts()
 
 module.exports = {
   apps: [
     {
-      name: appName,
+      name: 'ninjabazaar',
       cwd: __dirname,
       script: 'scripts/start-production.cjs',
       interpreter: 'node',
@@ -19,12 +15,9 @@ module.exports = {
       exec_mode: 'fork',
       autorestart: true,
       watch: false,
-      max_memory_restart: process.env.PM2_MAX_MEMORY || '1G',
-      // Do NOT use env_file here — it can re-inject PORT=6000 from .env
+      max_memory_restart: '1G',
       env: {
-        NODE_ENV: 'production',
-        APP_PORT: String(appPort),
-        PORT: String(appPort),
+        PORT: String(publicPort),
       },
     },
   ],

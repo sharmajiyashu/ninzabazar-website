@@ -9,22 +9,22 @@ const { publicPort, appPort, useProxy } = getPorts()
 const nextBin = require.resolve('next/dist/bin/next')
 const cwd = path.join(__dirname, '..')
 
-console.log(`[start] PORT=${publicPort}`)
+console.log(`[dev] PORT=${publicPort}`)
 
-const child = spawn(nextBin, ['start', '-p', String(appPort)], {
+const child = spawn(nextBin, ['dev', '-p', String(appPort)], {
   stdio: 'inherit',
   cwd,
   env: {
     ...process.env,
     PORT: String(appPort),
-    NODE_ENV: 'production',
+    NODE_ENV: 'development',
   },
 })
 
 if (useProxy) {
-  setTimeout(() => startPortProxy(publicPort, appPort), 1500)
+  setTimeout(() => startPortProxy(publicPort, appPort), 2000)
 } else {
-  console.log(`[start] http://localhost:${publicPort}`)
+  console.log(`[dev] http://localhost:${publicPort}`)
 }
 
 child.on('exit', (code) => process.exit(code ?? 1))

@@ -1,7 +1,10 @@
 import type { NextConfig } from 'next'
+import path from 'path'
 import { ROUTES } from './src/lib/routes/paths'
 
 const nextConfig: NextConfig = {
+  // Fix PM2/build when another package-lock.json exists in parent folders on server
+  outputFileTracingRoot: path.join(__dirname),
   async redirects() {
     return [
       {
