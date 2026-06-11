@@ -1,18 +1,16 @@
 const path = require('path')
-const { spawn } = require('child_process')
 require('dotenv').config({ path: path.join(__dirname, '..', '.env') })
 
 const { getPorts } = require('./ports.cjs')
 const { startPortProxy } = require('./port-proxy.cjs')
+const { spawnNext } = require('./spawn-next.cjs')
 
 const { publicPort, appPort, useProxy } = getPorts()
-const nextBin = require.resolve('next/dist/bin/next')
 const cwd = path.join(__dirname, '..')
 
 console.log(`[start] PORT=${publicPort}`)
 
-const child = spawn(nextBin, ['start', '-p', String(appPort)], {
-  stdio: 'inherit',
+const child = spawnNext('start', ['-p', String(appPort)], {
   cwd,
   env: {
     ...process.env,
